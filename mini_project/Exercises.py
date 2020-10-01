@@ -1,3 +1,4 @@
+#This code is in Python
 # import the necessary packages
 import picamera
 from picamera.array import PiRGBArray
