@@ -1,4 +1,5 @@
 #This code is in Python
+#Exercise 6 and 7 pertain to mini project
 # import the necessary packages
 import picamera
 from picamera.array import PiRGBArray
