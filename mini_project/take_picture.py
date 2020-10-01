@@ -1,3 +1,5 @@
+#This code is in Python
+#This code takes a picture using the camera on the Pi
 # import the necessary packages
 import picamera
 from picamera.array import PiRGBArray
