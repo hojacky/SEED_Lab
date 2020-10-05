@@ -90,17 +90,22 @@ def aruco_detection():
 
                             x_avg = (c[0][0]+c[1][0]+c[2][0]+c[3][0])/4
                             y_avg = (c[0][1]+c[1][1]+c[2][1]+c[3][1])/4
+                            location = 0        #This will tell the arduino which location the aruco marker was at
                             
                             
                             #check for position of marker on the wheel
                             if deg < 27 and y_avg > 544:
                                 print("The marker is at SW position.")
+                                location = 3
                             elif deg < 27 and y_avg < 544:
                                 print("The marker is at NW position.")
+                                location = 4
                             elif deg > 27 and y_avg > 544:
                                 print("The marker is at SE position.")
+                                location = 2
                             elif deg > 27 and y_avg < 544:
                                 print("The marker is at NE position.")
+                                location = 1
                             
                             #plt.plot([c[:, 0].mean()], [c[:, 1].mean()], "o", label = "id={0}".format(ids[i]))
 
@@ -108,6 +113,7 @@ def aruco_detection():
                         #plt.show()
                     sleep(1)
                     output.truncate(0)
+                    return location
 
         #This will check if the user presses CTRL + C to end while loop
         except KeyboardInterrupt:
