@@ -13,12 +13,12 @@ import matplotlib as mpl
 import math
 
 def aruco_detection():
-    sleep(3)
     print("Press CTRL + C to stop scanning for Aruco Markers.")
     f = 1550        #focal length of camera in px
     X_real = 189    #actual length of aruco marker in px
     fov = 54        #field of view of camera
     image_length = 1920     #length of image in px
+    location = 0    #This will tell the arduino which location the aruco marker was at
     while True:
         try:
             with picamera.PiCamera() as camera:
@@ -52,6 +52,8 @@ def aruco_detection():
                     #checks if any aruco markers were detected
                     if ids == None:
                         print("No markers found.")
+                        location = 0
+                        return location
                     else:
                         print("The IDs for the Aruco Markers are:")
                         for i in range(len(ids)):
@@ -90,30 +92,33 @@ def aruco_detection():
 
                             x_avg = (c[0][0]+c[1][0]+c[2][0]+c[3][0])/4
                             y_avg = (c[0][1]+c[1][1]+c[2][1]+c[3][1])/4
-                            location = 0        #This will tell the arduino which location the aruco marker was at
-                            
                             
                             #check for position of marker on the wheel
                             if deg < 27 and y_avg > 544:
                                 print("The marker is at SW position.")
                                 location = 3
+                                return location
                             elif deg < 27 and y_avg < 544:
                                 print("The marker is at NW position.")
                                 location = 4
+                                return location
                             elif deg > 27 and y_avg > 544:
                                 print("The marker is at SE position.")
                                 location = 2
+                                return location
                             elif deg > 27 and y_avg < 544:
                                 print("The marker is at NE position.")
                                 location = 1
+                                return location
+                            else:
+                                location = 0
+                                return location
                             
                             #plt.plot([c[:, 0].mean()], [c[:, 1].mean()], "o", label = "id={0}".format(ids[i]))
 
                         #plt.legend()
                         #plt.show()
-                    sleep(1)
                     output.truncate(0)
-                    return location
 
         #This will check if the user presses CTRL + C to end while loop
         except KeyboardInterrupt:
@@ -121,4 +126,10 @@ def aruco_detection():
             break
 
 if __name__ == '__main__':
-    aruco_detection()
+    while True:
+        try:
+            quadrant = aruco_detection()
+        except KeyboardInterrupt:
+            print("Stopped scanning for Aruco Markers")
+            break
+        
