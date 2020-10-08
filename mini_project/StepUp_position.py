@@ -15,7 +15,6 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera, Color
 from time import sleep
 from PIL import Image
-import time
 import cv2
 import cv2.aruco as aruco
 import numpy as np
@@ -43,7 +42,6 @@ def aruco_detection():
                     
                 #g is the average awb_gains red and blue values
                 g = (1.556, 1.168)
-                #g = (1.293, 1.586)
                 camera.awb_mode = 'off'
                 camera.awb_gains = g
                 camera.capture(output, 'rgb')
@@ -74,33 +72,10 @@ def aruco_detection():
                     for i in range(len(ids)):
                         c = corners[i][0]
 
-                        #Distance calculation
-                        #gathers position of corners and gets length
-                        x1 = c[0][0] - c[2][0]
-                        x2 = c[1][0] - c[3][0]
-                        #gathers average of both lengths
-                        x = (x1 + x2)/2
-                        if x < 0:
-                            x = x * -1
-                        #gather position of corners and gets height
-                        y1 = c[2][1] - c[0][1]
-                        y2 = c[1][1] - c[3][1]
-                        #gathers average of both heights
-                        y = (y1 + y2)/2
-                        if y < 0:
-                            y = y * -1
-                        #solve for distance using perspective projection equation
-                        Z = f*X_real/y
-                        #convert pixels to mm
-                        Z = Z / 3.77953
-                        #print("The distance of id %d is %d mm" %(ids[i], Z))
-
                         #Angle calculation
                         x_center = (c[0][0] + c[1][0] + c[2][0] + c[3][0])/4
                         deg = (x_center / image_length)*(fov)
-                        #print("The angle of id %d is %d degrees." %(ids[i], deg))
 
-                        x_avg = (c[0][0]+c[1][0]+c[2][0]+c[3][0])/4
                         y_avg = (c[0][1]+c[1][1]+c[2][1]+c[3][1])/4
                             
                         #check for position of marker on the wheel
@@ -150,21 +125,26 @@ def readNumber():
 if __name__ == '__main__':
 
     while True:
+        
         try:
             #Calculating Desired Position
 
-            x = aruco_detection();
+            x = aruco_detection()
+       
+            if x != 0:
+                var = x
+
+
+                writeNumber(var)
+                print ("RPI: Hi Arduino, I sent you" , var)
+                # sleep one second
+                time.sleep(1)
+
+                number = readNumber();
+                print ("Arduino: Hey RPI, I received a digit", number)
             
-            var = x;
-
-
-            writeNumber(var)
-            print ("RPI: Hi Arduino, I sent you" , var)
-            # sleep one second
-            time.sleep(1)
-
-            number = readNumber();
-            print ("Arduino: Hey RPI, I received a digit", number)
+            elif x == 0:
+                continue 
             
         
         except KeyboardInterrupt:
