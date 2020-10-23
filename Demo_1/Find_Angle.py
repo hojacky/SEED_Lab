@@ -95,4 +95,35 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print("Stopped scanning for Aruco Markers")
             break
+    # Modify this if you have a different sized Character LCD
+    lcd_columns = 16
+    lcd_rows = 2
+
+    # Initialise I2C bus.
+    i2c = busio.I2C(board.SCL, board.SDA)
+
+    # Initialise the LCD class
+    lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
+    lcd.clear()
+    # Set LCD color to red
+    lcd.color = [100, 0, 0]
+    time.sleep(1)
+
+    # Print message on sent value
+    scroll_msg1 = ("Angle Detected: "+ str(angle))
+    lcd.message = scroll_msg1
+    for i in range(len(scroll_msg1)):
+        time.sleep(0.5)
+        lcd.move_left()
+    # Wait 5s
+    time.sleep(1)
+    # Set LCD color to purple
+    lcd.color = [50, 0, 50]
+    time.sleep(1)
+    #clear before print new message
+    lcd.clear()
+
+    # Turn off LCD backlights and clear text
+    lcd.color = [0, 0, 0]        
+
 
