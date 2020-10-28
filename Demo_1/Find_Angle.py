@@ -11,6 +11,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
+import smbus
+import time
+import board
+import busio
+import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 
 def aruco_detection():
     print("Press CTRL + C to stop scanning for Aruco Markers.")
@@ -125,4 +130,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print("Stopped scanning for Aruco Markers")
             break
-  
+
