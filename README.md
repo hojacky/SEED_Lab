@@ -1,6 +1,7 @@
 This will be the area where code for the SEED Lab project will be placed. 
 This will allow all the team members to share code with each other easily. 
 Several subfolders will be made to hold code for each demonstration, leading up to the final demonstration.
+The purpose of this project is to create a project that can be controlled and sent to different locations on its own.
 
 The Mini_Project file contains all the code and versions of code for the mini project democstration. The mini project prompt was to detect a quadrant from the camera on the Pi, then send that quadrant to the arduino and move a motor which turns one wheel of the robot to that quadrant
 
