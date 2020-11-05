@@ -62,9 +62,9 @@ void setup() {
 	//Serial.println("Wheel positions");
   
   	//Open i2C
-  	//Wire.begin(SLAVE_ADDRESS);
+  	Wire.begin(SLAVE_ADDRESS);
   
-	//  Wire.onReceive(receiveData);
+	Wire.onReceive(receiveData);
 	//  Wire.onRequest(sendData);
   
 
@@ -114,7 +114,6 @@ void leftInterrupt(){
 void rightInterrupt(){
   	r_R = y_R;
   	y_R = motorEncoder2.read();
-
 }
 
 void turnFunc(angle) {
@@ -135,6 +134,8 @@ void turnFunc(angle) {
     	analogWrite(9,0);
 		motorEncoder.write(0);
       	motorEncoder2.write(0);
+		I_L = 0;
+		I_R = 0;
 		turn = 0;
 		straight = 1;
 		r_L = distance;
@@ -144,9 +145,6 @@ void turnFunc(angle) {
 
 	D_L = (y_L - r_L)/Ts; //rad/mil
 	D_R = (y_R - r_R)/Ts; //rad/mil
-
-	D_L = 0;
-	D_R = 0;
 
 	I_L = I_L + (Ts*lefterror); //rad*mil
 	I_R = I_R + (Ts*righterror); //rad*mil
@@ -244,12 +242,6 @@ straightFunc(distance) {
 	else{
     	digitalWrite(7, HIGH);
    	}
-   	if(angularDistance < 0){
-    	digitalWrite(8, LOW);
-   	}
-	else{
-    	digitalWrite(8, HIGH);
-   	}
    
    	leftControllerOutput = abs(leftControllerOutput);
    	leftControllerOutput = (leftControllerOutput/8.5)*255;
@@ -261,6 +253,7 @@ straightFunc(distance) {
    	if(rightControllerOutput > 255){
     	rightControllerOutput = 255;
    	}
+	
    	analogWrite(9,leftControllerOutput);
    	analogWrite(10,rightControllerOutput);
    
