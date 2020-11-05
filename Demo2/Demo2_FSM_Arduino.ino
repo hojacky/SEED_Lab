@@ -56,9 +56,6 @@ Encoder motorEncoder2(3, 6);
   
 #define SLAVE_ADDRESS 0x04  
 
-enum FSM {
-	turn, straight
-};
   
 void setup() {
 	Serial.begin(9600);
@@ -98,7 +95,183 @@ void setup() {
   	y_L = motorEncoder.read();
   	y_R = motorEncoder2.read();
 
-  	attachInterrupt(digitalPinToInterrupt(2),LeftAngle,CHANGE);
-  	attachInterrupt(digitalPinToInterrupt(3),RightAngle,CHANGE);
+  	attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
+  	attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
 
+}
+
+void receiveData(double){
+ 	angle = Wire.read();
+	distance = Wire.read();
+}
+
+void leftInterrupt(){
+	r_L = y_L;
+  	y_L = motorEncoder.read();
+}
+
+
+void rightInterrupt(){
+  	r_R = y_R;
+  	y_R = motorEncoder2.read();
+
+}
+
+void turnFunc(angle) {
+	////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////
+	//////////////////////Check for positive or negative angle/////////
+	//////////////////////////////////////////////////////////////////
+	Tc = millis();
+
+	y_L = (y_L/1600)*PI;
+	y_R = (y_R/1600)*PI;
+
+	lefterror = angularDistance - y_L;
+	righterror = angularDistance - y_R;
+	
+	if ((lefterror < 0.5) && (righterror < 0.5)){
+		analogWrite(10,0);
+    	analogWrite(9,0);
+		motorEncoder.write(0);
+      	motorEncoder2.write(0);
+		turn = 0;
+		straight = 1;
+		r_L = distance;
+    	r_R = distance;
+		return;
+	}
+
+	D_L = (y_L - r_L)/Ts; //rad/mil
+	D_R = (y_R - r_R)/Ts; //rad/mil
+
+	D_L = 0;
+	D_R = 0;
+
+	I_L = I_L + (Ts*lefterror); //rad*mil
+	I_R = I_R + (Ts*righterror); //rad*mil
+	leftControllerOutput = (Kp*lefterror);//+ (Ki*I_L) + (Kd*D_L);  
+	rightControllerOutput = (Kp*righterror);//+ (Ki*I_R) + (Kd*D_R); 
+	if (signbit(leftControllerOutput)) {
+	  	if (abs(leftControllerOutput) > 8.5) {
+			eftControllerOutput = -8.5;
+	  	}
+	} 
+	else if (abs(leftControllerOutput) > 8.5) {
+	  	leftControllerOutput = 8.5;
+	}
+
+	if (signbit(rightControllerOutput)){
+	  	if (abs(rightControllerOutput) > 8.5) {
+			rightControllerOutput = -8.5;
+	  	}
+	} 
+	else if (abs(rightControllerOutput) > 8.5) {
+	  	rightControllerOutput = 8.5;
+	}
+
+	if(leftControllerOutput > 0) { 
+	  	digitalWrite(7, LOW);
+	}
+	else {
+	  	digitalWrite(7, HIGH);
+	}
+
+	if(rightControllerOutput < 0) {
+	  	digitalWrite(8, LOW);
+	}
+	else {
+	  	digitalWrite(8, HIGH);
+	}
+
+	leftControllerOutput = abs(leftControllerOutput);
+	leftControllerOutput = (leftControllerOutput/8.5)*255;
+	if(leftControllerOutput > 255) {
+		leftControllerOutput = 255;
+	}
+
+	rightControllerOutput = abs(rightControllerOutput);
+	rightControllerOutput = (rightControllerOutput/8.5)*255;
+	if(rightControllerOutput > 255) {
+		rightControllerOutput = 255;
+	}
+	
+	digitalWrite(7, HIGH);
+	analogWrite(9,leftControllerOutput);
+	analogWrite(10,rightControllerOutput);
+
+	Tc2 = millis();
+	delay(50-(Tc2-Tc));
+
+}
+
+straightFunc(distance) {
+	Tc = millis();
+	y_L = (y_L/1600)*PI;
+    y_R = (y_R/1600)*PI;
+    strErr_L = distance + y_L;
+    strErr_R = distance - y_R;
+	
+	if ((strErr_L < 0.5) && (strErr_R < 0.5)) {
+		straight = 0;
+		turn = 1;
+		return;
+	}
+   	
+    D_L = (strErr_L - e_Lpast)/Ts; //rad/mil
+    e_Lpast = strErr_L;
+    D_R = (strErr_R - e_Rpast)/Ts; //rad/mil
+    e_Rpast = strErr_R;
+   
+   	if (strErr_L < 0){
+    	leftControllerOutput = 0;
+   	}
+	else{
+      	I_L = I_L + (Ts*strErr_L); //rad*mil
+      	leftControllerOutput = (Kp*strErr_L);// + (Ki*I_L) + (Kd*D_L)));
+   	}
+   	if (strErr_R < 0){
+    	rightControllerOutput = 0;
+   	}
+	else{
+     	I_R = I_R + (Ts*strErr_R); //rad*mil
+     	rightControllerOutput = (Kp*strErr_R);// + (Ki*I_R) + (Kd*D_R);
+   	} 
+   
+   	if(leftControllerOutput > 0){
+    	digitalWrite(7, LOW);
+   	}
+	else{
+    	digitalWrite(7, HIGH);
+   	}
+   	if(angularDistance < 0){
+    	digitalWrite(8, LOW);
+   	}
+	else{
+    	digitalWrite(8, HIGH);
+   	}
+   
+   	leftControllerOutput = abs(leftControllerOutput);
+   	leftControllerOutput = (leftControllerOutput/8.5)*255;
+   	if(leftControllerOutput > 255){
+    	leftControllerOutput = 255;
+   	}
+   	rightControllerOutput = abs(rightControllerOutput);
+   	rightControllerOutput = (rightControllerOutput/8.5)*255;
+   	if(rightControllerOutput > 255){
+    	rightControllerOutput = 255;
+   	}
+   	analogWrite(9,leftControllerOutput);
+   	analogWrite(10,rightControllerOutput);
+   
+   	Tc2 = millis();
+	delay(50-(Tc2-Tc));
+}
+
+void loop {
+	if (turn) {
+		turnFunc(angle);
+	}else if(straight){
+		straightFunc(distance);
+	}
 }
