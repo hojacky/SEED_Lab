@@ -146,6 +146,9 @@ if __name__ == '__main__':
 	
 		writeNumber(distance)
 		sleep(1)
+		
+		print("Press any key to take another image.")
+		cv2.waitKey(0)
 	
 	else:
 		continue
