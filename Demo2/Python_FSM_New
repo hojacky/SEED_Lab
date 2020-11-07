@@ -3,17 +3,51 @@
 #PYTHON = MASTER
 #11/6/2020
 
+
+import numpy as np
+import math
+import cv2
+from cv2 import aruco
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+from time import sleep
+import sys, select, os
+from smbus2 import SMBus
+import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
+import board
+import busio
+
+bus = SMBus(1)
+arduino_address = 0x04
+
+#------->>> IMPORT COMPUTER VISION CODE HERE<<<<<---------#
+
+#------->>> IMPORT COMPUTER LCD CODE HERE<<<<<------------#
+
+
 ############## STILL EDITING ################
 
 
 #-------------STATE MACHINE ----------------#
-class setup(State):
+class State():  # This machine is the Master and will be sending commands to the arduino to execute 
 
+  def locate():
+  # Find location? I am actually kind of unsure abt this one
 
-class turning(State):
+  def turning(): # We will have the arduino ready to read-in either a 1,2,3 code and if it recieives a one it enters the loop to turn, etc. 
+  
+  #Send Code 1 to indicate it is about to send angle to turn
+  #Send Angle value to Arduino to command it to turn
 
+  def straight():
+  #Send Code 2 to indicate it is about to go straight and send distance
+  #Send distance 
+ 
+  def endit():
+  # Send code 3 so it knows it will be disabling motors 
+  # Send values to disable motors
+  #Execute LCD display
 
-class straight(State):
-
-
-class endit(State):
+  
+  
