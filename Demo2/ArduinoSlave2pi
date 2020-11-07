@@ -10,12 +10,16 @@
 
 //----------------------DECLARE GLOBAL VARIABLES -----------------------//
 
+//WHEEL SPECS
+const double WheelRadius = 0.245;// radius of wheel need to measure also units?
+const double axleRadius = 0.323;//need to measure
+
 // PID CONTROLLER VALUES
 double Kp = 1.5;    //5.5; //V/rad
 double Kd = 0.5;    //0.5; //V/mil/rad
 double Ki = 0.0001; //0.0001; //V/rad*mil
 
-//Motor Driver Variables 
+//MOTOR DRIVER VARIABLES
 int newPos = 0;
 int phiold = 0;
 int expected_pos;
@@ -37,36 +41,131 @@ Encoder motorEncoder(2, 5);
 Encoder motorEncoder2(3, 6);
 
 
+//I2C Data Recieved
+double received; 
+double sentangle;  
+double distance;
+double enddata = 4; // Data sent back to pi when done running
+
+
+//Enable Motor encoder
+motor_L = motorEncoder.read();
+motor_R = motorEncoder2.read();
+
+
+//-----------------------SETUP LOOP DECLARATIONS ----------------------//
 
 void setup() {
 
   Serial.begin(9600);
   Wire.begin(SLAVE_ADDRESS); // OPEN i2C BUS -> LOOKING TO RECIEVE IN LOOP()
   
-  
+//---------------------- PIN CONFIGURATION-----------------------------//
 
+//set pins 4,7,8,9,10 as output
+  	pinMode(4, OUTPUT);
+  	pinMode(7, OUTPUT);
+  	pinMode(8, OUTPUT);
+  	pinMode(9, OUTPUT);
+    pinMode(10, OUTPUT);
+    pinMode(6,OUTPUT);
+    digitalWrite(6, HIGH);
+//set the enable pins high
+    digitalWrite(4, HIGH);
+    digitalWrite(7, HIGH);
+    digitalWrite(8, HIGH);
+    analogWrite(9, LOW);
+    analogWrite(10, LOW);
+//set pin 12 to input
+  	pinMode(12, INPUT);
+  
+  
 }
 
+
+//-------------------------MAIN LOOP STARTS --------------------------//
 
 void loop(){
 
-// ANGLE COMMANDS & Function Calls 
-// if recieve1 = 1{
-//  sentangle = Wire.onReceive(receiveData);
+  received = Wire.onReceive(receiveData);
+
+
+//---------------- ANGLE COMMANDS & Function Calls : MESSAGE 1 --------------------// 
+
+//-----------------------------------------------------------------------------------??????? WHERE TO INPUT DESIRED ANGLE????????
+
+   if received == 1 
+   {
+           sentangle = Wire.onReceive(receiveData); // Angle Sent Via I2C ------------------???? IS ANGLE SENT IN RADIANS ??? 
+
+
+        //LEFT AND RIGHT TIMING VARIABLES // ---------------------------------------------- ????? Should these have the same timing variable???
+             TsR = millis();
+             TsL = millis(); 
+
+
+        //INSERT LEFT and RIGHT WHEEL DIRECTIONS AND SPEEDS HERE 
+
+            motorEncoder.write(0);
+            motorEncoder2.write(0);
+
+            //Cast Counts To Radians
+            motor_L = (y_L/1600)*PI;
+            motor_R = (y_R/1600)*PI;
+
+            //Calc Errors
+            lefterror = angularDistance - y_L;
+            righterror = angularDistance - y_R;
+
+            //PID CONTROLLER OUTPUT 
+            leftControllerOutput = (Kp*lefterror); //+ (Ki*I_L) + (Kd*D_L);  
+            rightControllerOutput = (Kp*righterror); //+ (Ki*I_R) + (Kd*D_R); 
+
+            // 255 = Angular Distance to travel
+            leftControllerOutput = abs(leftControllerOutput);
+            leftControllerOutput = (leftControllerOutput/8.5)*255;
+            if(leftControllerOutput > 255) {
+              leftControllerOutput = 255;
+            }
+
+            rightControllerOutput = abs(rightControllerOutput);
+            rightControllerOutput = (rightControllerOutput/8.5)*255;
+            if(rightControllerOutput > 255) {
+              rightControllerOutput = 255;
+            }
+
+            digitalWrite(7, HIGH);
+            analogWrite(9,leftControllerOutput);
+            analogWrite(10,rightControllerOutput);
+
+            delay(50-(Tc2-Tc));
+
 
 
 }
 
-// STRAIGHT COMMANDS & Function Calls
-// if recieve2 = 2{
-  sentdistance = Wire.onReceive(receiveData);
+//--------------------STRAIGHT COMMANDS & Function Calls: MESSAGE 2 ---------------------//
+
+// if received == 2{
+      distance = Wire.onReceive(receiveData);
+
+
+
 
 }
 
-// STOP COMMANDS
-  if recieve3 = 3{
-  
-  
+//----------------------------- STOP COMMANDS: MESSAGE 3 --------------------------------//
+  if received == 3{
+    stopping = Wire.onRecieve(recieveData);
+    
+    //SET MOTOR ENCODER VALUES TO ZERO HERE
+    
+    
+    
+    //SEND BACK Code VALUE 4 TO DISPLAY LCD
+    //enddata == 4
+    Wire.onRequest(enddata);
+    
   }
 
 
