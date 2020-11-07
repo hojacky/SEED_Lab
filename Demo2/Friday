@@ -98,13 +98,24 @@ void setup() {
   
   //set pin 12 to input
   pinMode(12, INPUT);
-
-  //Turn angle from degrees to radians
+  
+   //Turn angle from degrees to radians
   angularDistance = (angularDistance*PI)/180; 
   
+  //turn if there is a given angle
+  if(angularDistance != 0){
+    r_L = angularDistance;
+    r_R = angularDistance;
+    turn = 1;
+    straight = 0;
+    }
+    else {
+      turn = 0;
+      r_L = Distance;
+      r_R = Distance;
+      }
+  
   //set the desired angular distance and read in current motor encodercounts
-  r_L = angularDistance;
-  r_R = angularDistance;
   y_L = motorEncoder.read();
   y_R = motorEncoder2.read();
 
@@ -117,6 +128,7 @@ void setup() {
 //void receiveData(double){
 //  angle = Wire.read();
 //  pi_distance = Wire.read();
+//  circle = 1;
 //}
 
 //Desired position is set to last position, last position is set to current position
@@ -132,10 +144,6 @@ void rightInterrupt(){
 }
 
 void turnFunc(double ang){
-  ////////////////////////////////////////////////////////////////////
-  ///////////////////////////////////////////////////////////////////
-  //////////////////////Check for positive or negative angle/////////
-  //////////////////////////////////////////////////////////////////
   Tc = millis();
 
   Serial.println("turn");
@@ -335,9 +343,6 @@ void straightFunc(double pi_dist){
 }
 
 void loop(){
-
-//need to add when we are turning/straight/circle
-
 
   if (turn){
     turnFunc(angularDistance);
