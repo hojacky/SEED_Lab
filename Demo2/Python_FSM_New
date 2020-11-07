@@ -1,0 +1,19 @@
+#Names: Group 14
+#StateMachine+Aruco+LCD_Demo2
+#PYTHON = MASTER
+#11/6/2020
+
+############## STILL EDITING ################
+
+
+#-------------STATE MACHINE ----------------#
+class setup(State):
+
+
+class turning(State):
+
+
+class straight(State):
+
+
+class endit(State):
