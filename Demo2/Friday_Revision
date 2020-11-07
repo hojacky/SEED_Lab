@@ -59,7 +59,7 @@ int phiold = 0;
 int expected_pos;
 bool turn = 0;
 bool straight = 0;
-bool circle = 0;
+int circle = 0;
 
 //set up encoder pins
 Encoder motorEncoder(2, 5);
@@ -154,10 +154,6 @@ void turnFunc(double ang){
 
   lefterror = ang - leftAngleRad;
   righterror = ang - rightAngleRad;
-//  Serial.println("left");
-//  Serial.println(lefterror);
-//  Serial.println("right");
-//  Serial.println(righterror);
   
   //If error drops below the threshhold, turn off the motors 
   if ((lefterror < 0.5) && (righterror < 0.5)){
@@ -175,6 +171,11 @@ void turnFunc(double ang){
     straight = 1;
     r_L = distance;
     r_R = distance;
+	
+	if(circle > 1){
+		circle++;
+		straight = 0;
+	}
     
     //Break out of function...does this actually break us?
     return;
@@ -280,15 +281,15 @@ void straightFunc(double pi_dist){
   y_R = (y_R/1600)*PI;
   
   //error calculation
-  strErr_L = distance + y_L;
-  strErr_R = distance - y_R;
+  strErr_L = pi_dist + y_L;
+  strErr_R = pi_dist - y_R;
   
   
   //check if error is small enough
   if ((strErr_L < 0.5) && (strErr_R < 0.5)) {
     straight = 0;
     turn = 0;
-    circle = 0;
+    circle++;
     
     analogWrite(RIGHTMOTORPWM,0);
     analogWrite(LEFTMOTORPWM,0);
@@ -347,57 +348,88 @@ void loop(){
 
   if (turn){
     turnFunc(angularDistance);
+	delay(3000);
   }
-  if(straight){
+  else if(straight){
     straightFunc(distance);
+	delay(3000);
   }
-  if(circle){
+  else if(circle > 0){
   
-    //I think we converted this in the setup function? Should this be 90?
-    angularDistance = (150*PI)/180;   //Convert to radians
+  	//turn right 90 
+    if(circle == 1){
+    	angularDistance = (150*PI)/180;   //Convert to radians
+    	turnFunc(angularDistance);
+   	 	delay(3000);
+	}
     
-    //turn the first 90
-    turnFunc(angularDistance);
-    delay(3000);
+    //go forward half a foot
+	if(circle == 2){
+    	distance = (1329/(2*PI*WheelRadius));
+    	distance = (distance/1600)*PI;
+    	straightFunc(distance);
+    	delay(3000);
+	}
     
-    //go forward a foot 
-    distance = (2658/(2*PI*WheelRadius));
-    distance = (distance/1600)*PI;
-    straightFunc(distance);
-    delay(3000);
-    
-    //turn 2nd 90
-    angularDistance = (-150*PI)/180;
-    turnFunc(angularDistance);
-    delay(3000);
-    
-    //go forward a foot 
-    distance = (2658/(2*PI*WheelRadius));
-    distance = (distance/1600)*PI;
-    straightFunc(distance);
-    delay(3000);
-    
-    //turn 3rd 90
-    angularDistance = (-150*PI)/180;
-    turnFunc(angularDistance);
-    delay(3000);
+    //turn left 90
+	if(circle == 3){
+		angularDistance = (-150*PI)/180;
+		turnFunc(angularDistance);
+		delay(3000);
+	}
     
     //go forward a foot 
-    distance = (2658/(2*PI*WheelRadius));
-    distance = (distance/1600)*PI;
-    straightFunc(distance);
-    delay(3000);
+	if(circle == 4){
+		distance = (2658/(2*PI*WheelRadius));
+		distance = (distance/1600)*PI;
+		straightFunc(distance);
+		delay(3000);
+	}
     
-    //turn 4th 90
-    angularDistance = (-150*PI)/180;
-    turnFunc(angularDistance);
-    delay(3000);
+    //turn left 90
+	if(circle == 5){
+		angularDistance = (-150*PI)/180;
+		turnFunc(angularDistance);
+		delay(3000);
+	}
     
     //go forward a foot 
-    distance = (2658/(2*PI*WheelRadius));
-    distance = (distance/1600)*PI;
-    straightFunc(distance);
-    delay(3000);
+	if(circle == 6){
+		distance = (2658/(2*PI*WheelRadius));
+		distance = (distance/1600)*PI;
+		straightFunc(distance);
+		delay(3000);
+	}
+    
+    //turn left 90
+	if(circle == 7){
+		angularDistance = (-150*PI)/180;
+		turnFunc(angularDistance);
+		delay(3000);
+	}
+    
+    //go forward a foot
+	if(circle == 8){
+		distance = (2658/(2*PI*WheelRadius));
+		distance = (distance/1600)*PI;
+		straightFunc(distance);
+		delay(3000);
+	}
+	
+	//turn left 90
+	if(circle == 9){
+		angularDistance = (-150*PI)/180;
+		turnFunc(angularDistance);
+		delay(3000);
+	}
+	
+	//go forward half a foot
+	if(circle == 10){
+		distance = (1329/(2*PI*WheelRadius));
+		distance = (distance/1600)*PI;
+		straightFunc(distance);
+		delay(3000);
+	}
     
   }
 }
