@@ -131,18 +131,18 @@ if __name__ == '__main__':
 
     while True:
             
-    angle, distance = aruco_detection()
+    	angle, distance = aruco_detection()
 	
-	if (deg < 100000000) and (distance < 100000000000) and (distance > 0):
+		if (deg < 100000000) and (distance < 100000000000) and (distance > 0):
 	
-		writeNumber(angle)
-		sleep(1)
+			writeNumber(angle)
+			sleep(1)
 	
-		writeNumber(distance)
-		sleep(1)
+			writeNumber(distance)
+			sleep(1)
 		
-		print("Press any key to take another image.")
-		cv2.waitKey(0)
+			print("Press any key to take another image.")
+			waitKey(0)
 	
 	else:
 		continue
@@ -220,54 +220,54 @@ def readNumber():
 #-------------STATE MACHINE ----------------#
 class State():  # This machine is the Master and will be sending commands to the arduino to execute 
 
-  def locate():
+    def locate():
   
-      # Find location? Idk if we actually need this one tbh. Let me know what you think
+        # Find location? Idk if we actually need this one tbh. Let me know what you think
 
-  def turning(): # We will have the arduino ready to read-in either a 1,2,3 code and if it recieives a one it enters the arduino loop to turn, etc. 
+    def turning(): # We will have the arduino ready to read-in either a 1,2,3 code and if it recieives a one it enters the arduino loop to turn, etc. 
   
-      #Send Code 1 to indicate it is about to send angle to turn
-        encode_m1 = 1;  
+        #Send Code 1 to indicate it is about to send angle to turn
+        encode_m1 = 1  
         def writeNumberone(encode_m1):
-          bus.write_byte(address,encode_m1)  
-          return -1
+            bus.write_byte(address,encode_m1)  
+            return -1
 
-      #Send angle as soon as 1 is recieved 
+        #Send angle as soon as 1 is recieved 
         def writeAngle(angle):
-          bus.write_byte(address,angle)
-          return -1
+            bus.write_byte(address,angle)
+            return -1
 
 
-  def straight():
+    def straight():
   
-      #Send Code 2 to indicate it is about to go straight and send distance
-      encode_m2 = 2;  
-          def writeNumberone(encode_m2):
+        #Send Code 2 to indicate it is about to go straight and send distance
+        encode_m2 = 2  
+      	def writeNumberone(encode_m2):
             bus.write_byte(address,encode_m2)  
             return -1
 
-      #Send distance as soon as 1 is recieved 
-          def writeAngle(distance):    #################### Idk what variable you assigned to deisred distance
+        #Send distance as soon as 1 is recieved 
+        def writeAngle(distance):    #################### Idk what variable you assigned to deisred distance
             bus.write_byte(address,distance)
             return -1
 
  
-  def endit():
-      # Send code 3 so it knows it will be disabling motors 
-      encode_m3 = 3;  
-          def writeNumberone(encode_m3):
+    def endit():
+        # Send code 3 so it knows it will be disabling motors 
+        encode_m3 = 3  
+        def writeNumberone(encode_m3):
             bus.write_byte(address,encode_m3)  
             return -1
 
-      # Send values to disable motors -> ASK MANDY ABOUT DISABLING MOTORS 
+        # Send values to disable motors -> ASK MANDY ABOUT DISABLING MOTORS 
       
-      #Recieve Code from Arduino to display LCD Values 
-      def readNumber():
-        endvalue = bus.read_byte(address)
-        return endvalue
+        #Recieve Code from Arduino to display LCD Values 
+        def readNumber():
+    	    endvalue = bus.read_byte(address)
+            return endvalue
 
-      if endvalue == 4{ 
-      #Execute LCD display
+        if endvalue == 4: 
+            #Execute LCD display
 
-      }
+      
 
