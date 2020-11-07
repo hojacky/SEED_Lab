@@ -1,1 +1,77 @@
+// Name: Group14
+// ARDUINO SLAVE CODE
+
+#include <Encoder.h>
+#include <Wire.h>
+
+#define PI 3.1415926535897932384626433832795
+#define SLAVE_ADDRESS 0x04  
+
+
+//----------------------DECLARE GLOBAL VARIABLES -----------------------//
+
+// PID CONTROLLER VALUES
+double Kp = 1.5;    //5.5; //V/rad
+double Kd = 0.5;    //0.5; //V/mil/rad
+double Ki = 0.0001; //0.0001; //V/rad*mil
+
+//Motor Driver Variables 
+int newPos = 0;
+int phiold = 0;
+int expected_pos;
+bool turn = 1;
+bool straight = 0;
+bool circle = 0;
+
+//Timing values(1/motor)
+int TsL = 50;
+int TsR = 0;
+
+//Error Values
+double lefterror = 0;
+double righterror = 0;
+
+
+//Motor Encoder Pin Setup
+Encoder motorEncoder(2, 5);
+Encoder motorEncoder2(3, 6);
+
+
+
+void setup() {
+
+  Serial.begin(9600);
+  Wire.begin(SLAVE_ADDRESS); // OPEN i2C BUS -> LOOKING TO RECIEVE IN LOOP()
+  
+  
+
+}
+
+
+void loop(){
+
+// ANGLE COMMANDS & Function Calls 
+// if recieve1 = 1{
+//  sentangle = Wire.onReceive(receiveData);
+
+
+}
+
+// STRAIGHT COMMANDS & Function Calls
+// if recieve2 = 2{
+  sentdistance = Wire.onReceive(receiveData);
+
+}
+
+// STOP COMMANDS
+  if recieve3 = 3{
+  
+  
+  }
+
+
+}
+
+
+
 
