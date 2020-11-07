@@ -1,11 +1,21 @@
-//SEED_LAB group 14 Arduino motor reading and spinning
- //Name the pins for clarification
+//SEED_LAB group 14 Arduino motor reading and spinning - Demo 2
 
 #include <Encoder.h>
 #include <Wire.h>
 
+//PWM motor pins
+#define LEFTMOTORPWM 9
+#define RIGHTMOTORPWM 10
+
+//directional motor pins
+#define LEFTDIRECTONPIN 7
+#define RIGHTDIRECTIONPIN 8
+
+//Other defined constants
 #define PI 3.1415926535897932384626433832795
-//  const double r = .05;
+#define SLAVE_ADDRESS 0x04 
+#define POWERPIN 6
+
 double distance = 2658;//((2658/(2*PI*0.245))/1600)*PI;//3ft
 //double distance = 13290;//5ft
 //double distance = 19606;//7ft
@@ -47,7 +57,7 @@ double rightAngleRad = 0;
 int newPos = 0;
 int phiold = 0;
 int expected_pos;
-bool turn = 1;
+bool turn = 0;
 bool straight = 0;
 bool circle = 0;
 
@@ -55,49 +65,52 @@ bool circle = 0;
 Encoder motorEncoder(2, 5);
 Encoder motorEncoder2(3, 6);
   
-#define SLAVE_ADDRESS 0x04  
-
-  
 void setup() {
   Serial.begin(9600);
-  //Serial.println("Wheel positions");
   
-    //Open i2C
-    Wire.begin(SLAVE_ADDRESS);
+  //Open i2C
+  Wire.begin(SLAVE_ADDRESS);
   
   //Wire.onReceive(receiveData);
   //  Wire.onRequest(sendData);
   
-
+  //Turn distance from feet into radians
   distance = (distance/(2*PI*WheelRadius));
-  distance = (distance/1600)*PI;
-
-  //angularDistance = (angularDistance/(4*PI*axleRadius));
-  angularDistance = (angularDistance*PI)/180;   //Convert to radians
-    //set pins 4,7,8,9,10 as output
-    pinMode(4, OUTPUT);
-    pinMode(7, OUTPUT);
-    pinMode(8, OUTPUT);
-    pinMode(9, OUTPUT);
-  pinMode(10, OUTPUT);
-  pinMode(6,OUTPUT);
-  digitalWrite(6, HIGH);
-  //set the enable pins high
+  distance = (distance/1600)*PI;  
+  
+  //set pins 4,7,8,9,10 as output
+  pinMode(4, OUTPUT);
+  pinMode(LEFTDIRECTIONPIN, OUTPUT);
+  pinMode(RIGHTDIRECTOINPIN, OUTPUT);
+  pinMode(LEFTMOTORPWM, OUTPUT);
+  pinMode(RIGHTMOTORPWM, OUTPUT);
+  
+  //Write the power pin to 5V
+  pinMode(POWERPIN,OUTPUT);
+  digitalWrite(POWERPIN, HIGH);
+  
+  //set the enable pins 
   digitalWrite(4, HIGH);
-  digitalWrite(7, HIGH);
-  digitalWrite(8, HIGH);
-  analogWrite(9, LOW);
-    analogWrite(10, LOW);
-    //set pin 12 to input
-    pinMode(12, INPUT);
+  digitalWrite(LEFTDIRECTIONPIN, HIGH);
+  digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+  analogWrite(LEFTMOTORPIN, LOW);
+  analogWrite(RIGHTMOTORPIN, LOW);
+  
+  //set pin 12 to input
+  pinMode(12, INPUT);
 
+  //Turn angle from degrees to radians
+  angularDistance = (angularDistance*PI)/180; 
+  
+  //set the desired angular distance and read in current motor encodercounts
   r_L = angularDistance;
-    r_R = angularDistance;
-    y_L = motorEncoder.read();
-    y_R = motorEncoder2.read();
+  r_R = angularDistance;
+  y_L = motorEncoder.read();
+  y_R = motorEncoder2.read();
 
-    attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
-    attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
+  //set up interrupt functions for each motor
+  attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
+  attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
 
 }
 
@@ -106,12 +119,13 @@ void setup() {
 //  pi_distance = Wire.read();
 //}
 
+//Desired position is set to last position, last position is set to current position
 void leftInterrupt(){
   r_L = y_L;
   y_L = motorEncoder.read();
 }
 
-
+//same as left interrupt
 void rightInterrupt(){
     r_R = y_R;
     y_R = motorEncoder2.read();
@@ -136,31 +150,42 @@ void turnFunc(double ang){
 //  Serial.println("right");
 //  Serial.println(righterror);
   
+  //If error drops below the threshhold, turn off the motors 
   if ((lefterror < 0.5) && (righterror < 0.5)){
-    analogWrite(10,0);
-    analogWrite(9,0);
+    analogWrite(RIGHTMOTORPWM,LOW);
+    analogWrite(LEFTMOTORPWM,HIGH);
     motorEncoder.write(0);
     motorEncoder2.write(0);
+    
+    //What are these here for?
     I_L = 0;
     I_R = 0;
+    
+    //setup for straight function
     turn = 0;
     straight = 1;
     r_L = distance;
     r_R = distance;
+    
+    //Break out of function...does this actually break us?
     return;
   }
-
+  
+  //Error calculations
   D_L = (y_L - r_L)/Ts; //rad/mil
   D_R = (y_R - r_R)/Ts; //rad/mil
 
   I_L = I_L + (Ts*lefterror); //rad*mil
   I_R = I_R + (Ts*righterror); //rad*mil
   
+  //PWM output is equal to the sum of the errors
   leftControllerOutput = (Kp*lefterror);//+ (Ki*I_L) + (Kd*D_L);  
   rightControllerOutput = (Kp*righterror);//+ (Ki*I_R) + (Kd*D_R); 
+  
+  //check the edge cases of the battery capacity
   if (signbit(leftControllerOutput)) {
       if (abs(leftControllerOutput) > 8.5) {
-      leftControllerOutput = -8.5;
+        leftControllerOutput = -8.5;
       }
   } 
   else if (abs(leftControllerOutput) > 8.5) {
@@ -169,44 +194,47 @@ void turnFunc(double ang){
 
   if (signbit(rightControllerOutput)){
       if (abs(rightControllerOutput) > 8.5) {
-      rightControllerOutput = -8.5;
+        rightControllerOutput = -8.5;
       }
   } 
   else if (abs(rightControllerOutput) > 8.5) {
       rightControllerOutput = 8.5;
   }
+  
+  //Check angle value for direction of turn
   if (ang < 0){
     if(leftControllerOutput > 0) { 
-        digitalWrite(7, LOW);
+        digitalWrite(LEFTDIRECTIONPIN, LOW);
     }
     else {
-        digitalWrite(7, HIGH);
+        digitalWrite(LEFTDIRECTIONPIN, HIGH);
     }
 
     if(rightControllerOutput < 0) {
-        digitalWrite(8, LOW);
+        digitalWrite(RIGHTDIRECTIONPIN, LOW);
     }
     else {
-        digitalWrite(8, HIGH);
+        digitalWrite(RIGHTDIRECTIONPIN, HIGH);
     }
   }
   
   else if(ang > 0){
     if(leftControllerOutput < 0) { 
-        digitalWrite(7, LOW);
+        digitalWrite(LEFTDIRECTIONPIN, LOW);
     }
     else {
-        digitalWrite(7, HIGH);
+        digitalWrite(LEFTDIRECTIONPIN, HIGH);
     }
 
     if(rightControllerOutput > 0) {
-        digitalWrite(8, LOW);
+        digitalWrite(RIGHTDIRECTIONPIN, LOW);
     }
     else {
-        digitalWrite(8, HIGH);
+        digitalWrite(RIGHTDIRECTIONPIN, HIGH);
     }
   }
 
+  //check edge cases of the PWM output
   leftControllerOutput = abs(leftControllerOutput);
   leftControllerOutput = (leftControllerOutput/8.5)*255;
   if(leftControllerOutput > 255) {
@@ -219,34 +247,48 @@ void turnFunc(double ang){
     rightControllerOutput = 255;
   }
   
-  digitalWrite(7, HIGH);
+  //This is here to ensure the pins go the opposite directions, but it needs to not be. We will always go left if this is here
+  //digitalWrite(7, HIGH);
+  
+  //turn the motors
   analogWrite(9,leftControllerOutput);
   analogWrite(10,rightControllerOutput);
 
+  //handle the timing
   Tc2 = millis();
   delay(50-(Tc2-Tc));
 
 }
 
 void straightFunc(double pi_dist){
+
   Tc = millis();
+  
   Serial.println("straight");
+  
+  //Everything in radians
   y_L = (y_L/1600)*PI;
   y_R = (y_R/1600)*PI;
+  
+  //error calculation
   strErr_L = distance + y_L;
   strErr_R = distance - y_R;
   
+  
+  //check if error is small enough
   if ((strErr_L < 0.5) && (strErr_R < 0.5)) {
     straight = 0;
     turn = 0;
     circle = 0;
-    analogWrite(10,0);
-    analogWrite(9,0);
+    
+    analogWrite(RIGHTMOTORPWM,0);
+    analogWrite(LEFTMOTORPWM,0);
     motorEncoder.write(0);
     motorEncoder2.write(0);
     return;
   }
     
+    //Error calculations...is this how we calculate?
     D_L = (strErr_L - e_Lpast)/Ts; //rad/mil
     e_Lpast = strErr_L;
     D_R = (strErr_R - e_Rpast)/Ts; //rad/mil
@@ -268,10 +310,10 @@ void straightFunc(double pi_dist){
     } 
    
     if(leftControllerOutput > 0){
-      digitalWrite(7, LOW);
+      digitalWrite(LEFTDIRECTIONPIN, LOW);
     }
   else{
-      digitalWrite(7, HIGH);
+      digitalWrite(LEFTDIRECTIONPIN, HIGH);
     }
    
     leftControllerOutput = abs(leftControllerOutput);
@@ -285,38 +327,67 @@ void straightFunc(double pi_dist){
       rightControllerOutput = 255;
     }
   
-    analogWrite(9,leftControllerOutput);
-    analogWrite(10,rightControllerOutput);
+    analogWrite(LEFTMOTORPWM,leftControllerOutput);
+    analogWrite(RIGHTMOTORPWM,rightControllerOutput);
    
     Tc2 = millis();
     delay(50-(Tc2-Tc));
 }
 
 void loop(){
+
+//need to add when we are turning/straight/circle
+
+
   if (turn){
-    turnFunc(angle);
+    turnFunc(angularDistance);
   }
-  else if(straight){
+  if(straight){
     straightFunc(distance);
   }
-  else if(circle){
+  if(circle){
+  
+    //I think we converted this in the setup function? Should this be 90?
     angularDistance = (150*PI)/180;   //Convert to radians
+    
+    //turn the first 90
     turnFunc(angularDistance);
     delay(5000);
+    
+    //go forward a foot 
     distance = (2658/(2*PI*WheelRadius));
     distance = (distance/1600)*PI;
     straightFunc(distance);
     delay(5000);
+    
+    //turn 2nd 90
     angularDistance = (-150*PI)/180;
     turnFunc(angularDistance);
     delay(5000);
+    
+    //go forward a foot 
     distance = (2658/(2*PI*WheelRadius));
     distance = (distance/1600)*PI;
     straightFunc(distance);
     delay(5000);
+    
+    //turn 3rd 90
     angularDistance = (-150*PI)/180;
     turnFunc(angularDistance);
     delay(5000);
+    
+    //go forward a foot 
+    distance = (2658/(2*PI*WheelRadius));
+    distance = (distance/1600)*PI;
+    straightFunc(distance);
+    delay(5000);
+    
+    //turn 4th 90
+    angularDistance = (-150*PI)/180;
+    turnFunc(angularDistance);
+    delay(5000);
+    
+    //go forward a foot 
     distance = (2658/(2*PI*WheelRadius));
     distance = (distance/1600)*PI;
     straightFunc(distance);
