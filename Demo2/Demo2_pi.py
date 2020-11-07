@@ -54,7 +54,7 @@ def angle_detection():
                     
             #allow user to know what image is going to be taken
             camera.start_preview()
-            sleep(1)
+            sleep(3)
             camera.stop_preview()
                     
             #g is the average awb_gains red and blue values
