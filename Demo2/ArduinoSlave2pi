@@ -87,7 +87,7 @@ void loop(){
   //TIMING VARIABLE DECLARED
   Ts = millis();
 
-  //
+  //OPEN I2C to RECIEVE
   received = Wire.onReceive(receiveData);
   
 //---------------- ANGLE COMMANDS & Function Calls : MESSAGE 1 --------------------// 
@@ -103,28 +103,30 @@ void loop(){
    if received == 1 
    {        
              //STEP 1: RECIEVE DESIRED ANGLE FROM PI
-             desangle = Wire.onReceive(receiveData); // Angle Sent Via I2C ------------------???? IS ANGLE SENT IN RADIANS ??? 
+             des_angle = Wire.onReceive(receiveData); // Angle Sent Via I2C ------------------???? Angle sent in Radians????
 
           
-            //STEP 2: Calculating Velocity: Updating Position of Robot Variable 
+            //STEP 2: Calculating Velocity: Updating Position of Robot Variable?
              velocity_L = ((motorEncoder.read()/1600*PI) - distance)/Ts; //rad/mil
              velocity_R = ((motorEncoder2.read()/1600*PI) - distance)/Ts; //rad/mil     //--------->>> What is distance??
+             
+             //STEP 3:CALC CURRENT POS: Current position of robot?
+             // calculate x and Y values for where the robot is starting at the origin?
+            // curr_angle = ??
        
 
             //Calc Errors ------------------------------------------------> Not sure if this is needed ? 
             lefterror = angularDistance - y_L;
             righterror = angularDistance - y_R;
 
-            //PID CONTROLLER OUTPUT 
-            leftControllerOutput = (Kp*lefterror); //+ (Ki*I_L) + (Kd*D_L);  
-            rightControllerOutput = (Kp*righterror); //+ (Ki*I_R) + (Kd*D_R); 
-
-         
-
-            delay(50-(Tc2-Tc));
-
-
-
+            //STEP 4: PID CONTROLLER OUTPUT 
+            left_wheelwrite = (curr_angle - des_angle)*Kp; 
+            right_wheelwrite = -(curr_angle - des_angle)*Kp;
+            // How to write that to motors? 
+              
+              
+            //Wait for next command Delay
+            delay(50-(Ts));
 }
 
 //--------------------STRAIGHT COMMANDS & Function Calls: MESSAGE 2 ---------------------//
