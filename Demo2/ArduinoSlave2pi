@@ -43,14 +43,11 @@ Encoder motorEncoder2(3, 6);
 
 //I2C Data Recieved
 double received; 
-double sentangle;  
-double distance;
+double des_angle;  // angle sent from I2C
+double curr_angle; // Calculated angle of robot 
+double dist_aruco; // Distance from Aruco? 
 double enddata = 4; // Data sent back to pi when done running
 
-
-//Enable Motor encoder
-motor_L = motorEncoder.read();
-motor_R = motorEncoder2.read();
 
 
 //-----------------------SETUP LOOP DECLARATIONS ----------------------//
@@ -63,10 +60,10 @@ void setup() {
 //---------------------- PIN CONFIGURATION-----------------------------//
 
 //set pins 4,7,8,9,10 as output
-  	pinMode(4, OUTPUT);
-  	pinMode(7, OUTPUT);
-  	pinMode(8, OUTPUT);
-  	pinMode(9, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(7, OUTPUT);
+    pinMode(8, OUTPUT);
+    pinMode(9, OUTPUT);
     pinMode(10, OUTPUT);
     pinMode(6,OUTPUT);
     digitalWrite(6, HIGH);
@@ -77,7 +74,7 @@ void setup() {
     analogWrite(9, LOW);
     analogWrite(10, LOW);
 //set pin 12 to input
-  	pinMode(12, INPUT);
+    pinMode(12, INPUT);
   
   
 }
@@ -86,34 +83,35 @@ void setup() {
 //-------------------------MAIN LOOP STARTS --------------------------//
 
 void loop(){
+  
+  //TIMING VARIABLE DECLARED
+  Ts = millis();
 
+  //
   received = Wire.onReceive(receiveData);
-
-
+  
 //---------------- ANGLE COMMANDS & Function Calls : MESSAGE 1 --------------------// 
 
-//-----------------------------------------------------------------------------------??????? WHERE TO INPUT DESIRED ANGLE????????
+  //1) RECIEVES DESIRED ANGLE,  
+  //2) UPDATE ANGLE POS VARIABLE( based off velocity?)(actual angle)
+      //Know Angle of Robot and X-y position of center point 
+      // X,Y,& Phi
+  //3) CALC CURRENT POS (change in encoder pulses)
+  //4) proportional control -> Subtract (actual - desired angle)*Kp = Write to each wheel  -> Proportional control (higher Kp higher change)
+  
 
    if received == 1 
-   {
-           sentangle = Wire.onReceive(receiveData); // Angle Sent Via I2C ------------------???? IS ANGLE SENT IN RADIANS ??? 
+   {        
+             //STEP 1: RECIEVE DESIRED ANGLE FROM PI
+             desangle = Wire.onReceive(receiveData); // Angle Sent Via I2C ------------------???? IS ANGLE SENT IN RADIANS ??? 
 
+          
+            //STEP 2: Calculating Velocity: Updating Position of Robot Variable 
+             velocity_L = ((motorEncoder.read()/1600*PI) - distance)/Ts; //rad/mil
+             velocity_R = ((motorEncoder2.read()/1600*PI) - distance)/Ts; //rad/mil     //--------->>> What is distance??
+       
 
-        //LEFT AND RIGHT TIMING VARIABLES // ---------------------------------------------- ????? Should these have the same timing variable???
-             TsR = millis();
-             TsL = millis(); 
-
-
-        //INSERT LEFT and RIGHT WHEEL DIRECTIONS AND SPEEDS HERE 
-
-            motorEncoder.write(0);
-            motorEncoder2.write(0);
-
-            //Cast Counts To Radians
-            motor_L = (y_L/1600)*PI;
-            motor_R = (y_R/1600)*PI;
-
-            //Calc Errors
+            //Calc Errors ------------------------------------------------> Not sure if this is needed ? 
             lefterror = angularDistance - y_L;
             righterror = angularDistance - y_R;
 
@@ -121,22 +119,7 @@ void loop(){
             leftControllerOutput = (Kp*lefterror); //+ (Ki*I_L) + (Kd*D_L);  
             rightControllerOutput = (Kp*righterror); //+ (Ki*I_R) + (Kd*D_R); 
 
-            // 255 = Angular Distance to travel
-            leftControllerOutput = abs(leftControllerOutput);
-            leftControllerOutput = (leftControllerOutput/8.5)*255;
-            if(leftControllerOutput > 255) {
-              leftControllerOutput = 255;
-            }
-
-            rightControllerOutput = abs(rightControllerOutput);
-            rightControllerOutput = (rightControllerOutput/8.5)*255;
-            if(rightControllerOutput > 255) {
-              rightControllerOutput = 255;
-            }
-
-            digitalWrite(7, HIGH);
-            analogWrite(9,leftControllerOutput);
-            analogWrite(10,rightControllerOutput);
+         
 
             delay(50-(Tc2-Tc));
 
@@ -147,30 +130,11 @@ void loop(){
 //--------------------STRAIGHT COMMANDS & Function Calls: MESSAGE 2 ---------------------//
 
 // if received == 2{
-      distance = Wire.onReceive(receiveData);
-
+      dist_aruco = Wire.onReceive(receiveData);
 
 
 
 }
 
-//----------------------------- STOP COMMANDS: MESSAGE 3 --------------------------------//
-  if received == 3{
-    stopping = Wire.onRecieve(recieveData);
-    
-    //SET MOTOR ENCODER VALUES TO ZERO HERE
-    
-    
-    
-    //SEND BACK Code VALUE 4 TO DISPLAY LCD
-    //enddata == 4
-    Wire.onRequest(enddata);
-    
-  }
-
 
 }
-
-
-
-
