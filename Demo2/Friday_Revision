@@ -179,6 +179,8 @@ void turnFunc(double ang){
     //setup for straight function
     turn = 0;
     straight = 1;
+    
+    //Setting to go three feet /// ------------------------------------------------------------------------------> Readin distance from I2C
     r_L = distance;
     r_R = distance;
 	
@@ -190,7 +192,6 @@ void turnFunc(double ang){
     return;
   }
   
-
 
   ///------------------------- Calculating PID CONTROLLER Values Turning-------------------------  ///
   
