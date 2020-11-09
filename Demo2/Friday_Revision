@@ -48,7 +48,7 @@ double r_R = 0; //quadrant;
 double y_L = 0;
 double y_R = 0;
 double Tc2 = 0;
-double angle = 0;
+double angle = 90;  //90 deg.----------------------------------------------------------------> HARDCODED FOR TESTING MAKE SURE TO CHANGE BACK TO ZERO FOR I2C READING
 double pi_distance = 0;
 double leftAngleRad = 0;
 double rightAngleRad = 0;
@@ -72,7 +72,7 @@ void setup() {
   Wire.begin(SLAVE_ADDRESS);
   
   //Wire.onReceive(receiveData);
-  //  Wire.onRequest(sendData);
+  // Wire.onRequest(sendData);
   
   //Turn distance from feet into radians
   distance = (distance/(2*PI*WheelRadius));
