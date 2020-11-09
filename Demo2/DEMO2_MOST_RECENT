@@ -8,7 +8,7 @@
 #define RIGHTMOTORPWM 10
 
 //directional motor pins
-#define LEFTDIRECTONPIN 7
+#define LEFTDIRECTIONPIN 7
 #define RIGHTDIRECTIONPIN 8
 
 //Other defined constants
@@ -35,8 +35,8 @@ double Kd = 0.5;    //0.5; //V/mil/rad
 double Ki = 0.0001; //0.0001; //V/rad*mil
 double I_L = 0;
 double I_R;
-double e_Lpast;
-double e_Rpast;
+double eL_Past;
+double eR_Past;
 int Ts = 50;
 double Tc = 0;
 double lefterror = 0;
@@ -72,7 +72,7 @@ void setup() {
   Wire.begin(SLAVE_ADDRESS);
   
   //Wire.onReceive(receiveData);
-  // Wire.onRequest(sendData);
+  //Wire.onRequest(sendData);
   
   //Turn distance from feet into radians
   distance = (distance/(2*PI*WheelRadius));
@@ -81,7 +81,7 @@ void setup() {
   //set pins 4,7,8,9,10 as output
   pinMode(4, OUTPUT); // On/off switch for motors
   pinMode(LEFTDIRECTIONPIN, OUTPUT);
-  pinMode(RIGHTDIRECTOINPIN, OUTPUT);
+  pinMode(RIGHTDIRECTIONPIN, OUTPUT);
   pinMode(LEFTMOTORPWM, OUTPUT);
   pinMode(RIGHTMOTORPWM, OUTPUT);
   
@@ -93,14 +93,14 @@ void setup() {
   digitalWrite(4, HIGH);
   //digitalWrite(LEFTDIRECTIONPIN, HIGH); // rewritten as soon as PID control starts 
   //digitalWrite(RIGHTDIRECTIONPIN, HIGH);
-  analogWrite(LEFTMOTORPIN, LOW); // Setting them to be zero
-  analogWrite(RIGHTMOTORPIN, LOW);
+  analogWrite(LEFTMOTORPWM, LOW); // Setting them to be zero
+  analogWrite(RIGHTMOTORPWM, LOW);
   
   //set pin 12 to input ?? --------------------------------------------------------------------------> WHAT IS PIN 12
   pinMode(12, INPUT);
   
    //How many degrees you want to turn the wheel-----------------------------------------------------------------------------------------------------> I2C READ IN ANGLE
-  //angularDistance = (angle/360)*(distance between wheels *3.14)*(2*3.14/19); // circumf. = 19 inches && Distance_turning = 2*3.14/19
+  angularDistance = (angle/360)*(7.6 * 3.14)*(2*3.14/19); // circumf. = 19 inches && Distance_turning = 2*3.14/19
   
  
   //turn if there is a given angle
@@ -113,17 +113,17 @@ void setup() {
     else { // Set angularDistance to 0 when transitioning to go straight
       turn = 0; // IF done turning, then set wheels to go straight positive 
       straight = 1; 
-      r_L = Distance;
-      r_R = Distance;
+      r_L = distance;
+      r_R = distance;
       }
   
   //set the desired angular distance and read in current motor encodercounts -> Change to radians 
-  leftAngleRad = (motorEncoder.read())/1600*PI;
-  rightAngleRad =(motorEncoder2.read())/1600*PI;
+  //leftAngleRad = ((motorEncoder.read())/1600)*PI;
+  //rightAngleRad =((motorEncoder2.read())/1600)*PI;
 
-  //set up interrupt functions for each motorencoder
-  attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
-  attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
+//  //set up interrupt functions for each motorencoder
+//  attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
 
 }
 
@@ -155,18 +155,26 @@ void setup() {
 void turnFunc(double ang){
   Tc = millis();
   
-  leftAngleRad = (motorEncoder.read())/1600*PI;
-  rightAngleRad =(motorEncoder2.read())/1600*PI;
+  leftAngleRad = ((motorEncoder.read())/1600)*PI;
+  rightAngleRad =((motorEncoder2.read())/1600)*PI;
 
   Serial.println("turn");
 
   lefterror = ang - leftAngleRad; //desired angle - actual angle radians of wheel 
   righterror = ang - rightAngleRad;
+  Serial.println("lefterror:");
+  Serial.println(lefterror);
+  
+  Serial.println("righterror: ");
+    Serial.println(righterror);
+  
   
   //If error drops below the threshhold, turn off the motors 
   if ((lefterror < 0.5) && (righterror < 0.5)){
     analogWrite(RIGHTMOTORPWM, 0); // PINS 9 & 10 accept only 0 to 255 not low and high 
     analogWrite(LEFTMOTORPWM, 0);
+
+  Serial.println("inside");
     
     //After turn -> Reset Encoder to give distance
     motorEncoder.write(0);
@@ -183,11 +191,11 @@ void turnFunc(double ang){
     //Setting to go three feet /// ------------------------------------------------------------------------------> Readin distance from I2C
     r_L = distance;
     r_R = distance;
-	
-	if(circle > 1){
-		circle++;
-		straight = 0;
-	}
+  
+  if(circle > 1){
+    circle++;
+    straight = 0;
+  }
     
     return;
   }
@@ -196,7 +204,7 @@ void turnFunc(double ang){
   ///------------------------- Calculating PID CONTROLLER Values Turning-------------------------  ///
   
   
-  -----------------//LEFT PID//-----------------
+  //-----------------//LEFT PID//-----------------//
   // Check if Ts is zero 
   if (Ts > 0) {
      
@@ -208,10 +216,10 @@ void turnFunc(double ang){
      D_L = 0; // rad/sec
    }
      I_L = I_L + (Ts*lefterror); //rad*mil
-     leftControllerOutput = (Kp*lefterror) + (Ki*I_L) + (Kd*D_L);
+     leftControllerOutput = (Kp*lefterror);// + (Ki*I_L) + (Kd*D_L);
   
   
-  -----------------//RIGHT PID//-----------------
+  //-----------------//RIGHT PID//-----------------//
   if (Ts > 0){
       
      /// Calculating Right Derrivative Values ///
@@ -223,7 +231,7 @@ void turnFunc(double ang){
      }
      
      I_R = I_R + (Ts*righterror); //rad*mil
-     rightControllerOutput = (Kp*righterror) + (Ki*I_R) + (Kd*D_R); 
+     rightControllerOutput = (Kp*righterror);// + (Ki*I_R) + (Kd*D_R); 
 
  
   //PWM output is equal to the sum of the errors
@@ -316,8 +324,8 @@ void straightFunc(double pi_dist){
   Serial.println("straight");
   
   //Everything in radians
-  leftAngleRad = -(motorEncoder.read())/1600*PI;// easier to flip what is read in than all the values bro
-  rightAngleRad =(motorEncoder2.read())/1600*PI;
+  leftAngleRad = -((motorEncoder.read())/1600)*PI;// easier to flip what is read in than all the values bro
+  rightAngleRad =((motorEncoder2.read())/1600)*PI;
   
   //Str8 error calculation -> Desired distance - read in
   strErr_L = pi_dist - leftAngleRad;
@@ -337,34 +345,34 @@ void straightFunc(double pi_dist){
     return;
   }
     
-  ------------------------  //Error calculations derrivatives // -----------------------------
+  //------------------------  //Error calculations derrivatives // -----------------------------//
   
   
-  -----------------//LEFT PID//-----------------
+  //-----------------//LEFT PID//-----------------//
   // Check if Ts is zero 
   if (Ts > 0) {
      
      /// Calculating Left Derrivative Values ///
-      D_L = (strErr_L - e_Lpast)/Ts; //rad/mil
-      e_Lpast = strErr_L;
+      D_L = (strErr_L - eL_Past)/Ts; //rad/mil
+      eL_Past = strErr_L;
    }
    else {
      D_L = 0; // rad/sec
    }
      I_L = I_L + (Ts*strErr_L); //rad*mil
-     leftControllerOutput = (Kp*strErr_L);// + (Ki*I_L) + (Kd*D_L)));
+     leftControllerOutput = (Kp*strErr_L);// + (Ki*I_L) + (Kd*D_L);
      
-  ----------------//RIGHT PID//-----------------
+  //----------------//RIGHT PID//-----------------//
   // Check if Ts is zero 
-  if (Ts > 0){
+  if(Ts > 0){
       
      /// Calculating Right Derrivative Values ///
-     D_R = (strErr_R - e_Rpast)/Ts; //rad/mil
-     e_Rpast = strErr_R;
-     }
-     else{
+     D_R = (strErr_R - eR_Past)/Ts; //rad/mil
+     eR_Past = strErr_R;
+  }
+  else{
      D_R = 0; // rad/sec
-     }
+  }
      I_R = I_R + (Ts*strErr_R); //rad*mil
      rightControllerOutput = (Kp*strErr_R);// + (Ki*I_R) + (Kd*D_R);
     
@@ -387,17 +395,17 @@ void straightFunc(double pi_dist){
     leftControllerOutput = abs(leftControllerOutput);
     leftControllerOutput = (leftControllerOutput/8.5)*255;// Puts it into a 0-255 range 
     if (signbit(leftControllerOutput)) {
-    	if (abs(leftControllerOutput) > 8.5) {
-      	leftControllerOutput = 8.5;
-  	}
+      if (abs(leftControllerOutput) > 8.5) {
+        leftControllerOutput = 8.5;
+    }
   }
     
     rightControllerOutput = abs(rightControllerOutput);
     rightControllerOutput = (rightControllerOutput/8.5)*255;
     if(signbit(rightControllerOutput)){
-    	if(abs(rightControllerOutput)> 8.5){
+      if(abs(rightControllerOutput)> 8.5){
       rightControllerOutput = 8.5;
-    	}
+      }
   }
    
   ///--------------------------------------Write to Left and Right Motors------------------------------------------///
@@ -425,86 +433,86 @@ void loop(){
   
   else if(circle > 0){   // To do a circle you have to set the right wheel to go faster and farther 
   
-  	//turn right 90 
+    //turn right 90 
     if(circle == 1){
-    	angularDistance = (150*PI)/180;   //Convert to radians
-    	turnFunc(angularDistance);
-   	 	delay(3000);
-	}
+      angularDistance = (150*PI)/180;   //Convert to radians
+      turnFunc(angularDistance);
+      delay(3000);
+  }
     
     //go forward half a foot
-	if(circle == 2){
-    	distance = (1329/(2*PI*WheelRadius));
-    	distance = (distance/1600)*PI;
-    	straightFunc(distance);
-    	delay(3000);
-	}
+  if(circle == 2){
+      distance = (1329/(2*PI*WheelRadius));
+      distance = (distance/1600)*PI;
+      straightFunc(distance);
+      delay(3000);
+  }
     
     //turn left 90
-	if(circle == 3){
-		angularDistance = (-150*PI)/180;
-		turnFunc(angularDistance);
-		delay(3000);
-	}
+  if(circle == 3){
+    angularDistance = (-150*PI)/180;
+    turnFunc(angularDistance);
+    delay(3000);
+  }
     
     //go forward a foot 
-	if(circle == 4){
-		distance = (2658/(2*PI*WheelRadius));
-		distance = (distance/1600)*PI;
-		straightFunc(distance);
-		delay(3000);
-	}
+  if(circle == 4){
+    distance = (2658/(2*PI*WheelRadius));
+    distance = (distance/1600)*PI;
+    straightFunc(distance);
+    delay(3000);
+  }
     
     //turn left 90
-	if(circle == 5){
-		angularDistance = (-150*PI)/180;
-		turnFunc(angularDistance);
-		delay(3000);
-	}
+  if(circle == 5){
+    angularDistance = (-150*PI)/180;
+    turnFunc(angularDistance);
+    delay(3000);
+  }
     
     //go forward a foot 
-	if(circle == 6){
-		distance = (2658/(2*PI*WheelRadius));
-		distance = (distance/1600)*PI;
-		straightFunc(distance);
-		delay(3000);
-	}
+  if(circle == 6){
+    distance = (2658/(2*PI*WheelRadius));
+    distance = (distance/1600)*PI;
+    straightFunc(distance);
+    delay(3000);
+  }
     
     //turn left 90
-	if(circle == 7){
-		angularDistance = (-150*PI)/180;
-		turnFunc(angularDistance);
-		delay(3000);
-	}
+  if(circle == 7){
+    angularDistance = (-150*PI)/180;
+    turnFunc(angularDistance);
+    delay(3000);
+  }
     
     //go forward a foot
-	if(circle == 8){
-		distance = (2658/(2*PI*WheelRadius));
-		distance = (distance/1600)*PI;
-		straightFunc(distance);
-		delay(3000);
-	}
-	
-	//turn left 90
-	if(circle == 9){
-		angularDistance = (-150*PI)/180;
-		turnFunc(angularDistance);
-		delay(3000);
-	}
-	
-	//go forward half a foot
-	if(circle == 10){
-		distance = (1329/(2*PI*WheelRadius));
-		distance = (distance/1600)*PI;
-		straightFunc(distance);
-		delay(3000);
-	}
-	
-	
+  if(circle == 8){
+    distance = (2658/(2*PI*WheelRadius));
+    distance = (distance/1600)*PI;
+    straightFunc(distance);
+    delay(3000);
+  }
+  
+  //turn left 90
+  if(circle == 9){
+    angularDistance = (-150*PI)/180;
+    turnFunc(angularDistance);
+    delay(3000);
+  }
+  
+  //go forward half a foot
+  if(circle == 10){
+    distance = (1329/(2*PI*WheelRadius));
+    distance = (distance/1600)*PI;
+    straightFunc(distance);
+    delay(3000);
+  }
+  
+  
       //TIMING VARIABLES UPDATING EACH LOOP 
- 	Ts = (millis() - Tc); // Getting loop time
- 	Tc = millis(); // Getting current time
-  	delay(50);
+  Ts = (millis() - Tc); // Getting loop time
+  Tc = millis(); // Getting current time
+    delay(50);
 
   }
 }
