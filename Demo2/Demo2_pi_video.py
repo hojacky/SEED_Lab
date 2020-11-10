@@ -17,6 +17,30 @@ import board
 import busio
 import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 
+def marker_detection():
+	#setup for video and resolution
+	cap = cv2.VideoCapture(0)
+	cap.set(3, 1920)
+	cap.set(4,1080)
+	ret, image = cap.read()
+              
+    #Convert image to grayscale
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    
+    #gathers aruco dictionary and parameters
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    parameters = aruco.DetectorParameters_create()
+
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters=parameters)
+    frame_markers = aruco.drawDetectedMarkers(image.copy(), corners, ids)
+                    
+    #checks if any aruco markers were detected
+    if ids == None:
+        print("No markers found.")
+		return False
+    else:
+        return True
+
 def angle_detection():
     fov = 54        #field of view of camera
     image_length = 1920     #length of image in px
@@ -47,75 +71,85 @@ def angle_detection():
 	##########################################
 	##########################################
     
-    with picamera.PiCamera() as camera:
-        with picamera.array.PiRGBArray(camera) as output:
-            #set camera resolution so preview image is same as actual photo
-            camera.resolution = (1920, 1088)
-                    
-            #allow user to know what image is going to be taken
-            camera.start_preview()
-            sleep(3)
-            camera.stop_preview()
-                    
-            #g is the average awb_gains red and blue values
-            g = (1.556, 1.168)
-            camera.awb_mode = 'off'
-            camera.awb_gains = g
-            camera.capture(output, 'rgb')
-                    
-            #set the image taken to image variable and convert to grayscale
-            image = output.array
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                    
-            #gathers aruco dictionary and parameters
-            aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-            parameters = aruco.DetectorParameters_create()
 
-            corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters=parameters)
-            frame_markers = aruco.drawDetectedMarkers(image.copy(), corners, ids)
+    #setup for video and resolution
+	cap = cv2.VideoCapture(0)
+	cap.set(3, 1920)
+	cap.set(4,1080)
+	ret, image = cap.read()
+              
+    #Convert image to grayscale
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     
-            #checks if any aruco markers were detected
-            if ids == None:
-                print("No markers found.")
-				return 100000000, 100000000000
-            else:
-                print("The IDs for the Aruco Markers are:")
-                for i in range(len(ids)):
-                    print(ids[i])
-					
-                for i in range(len(ids)):
-                    c = corners[i][0]
-					
-					#Distance calculation
-					#gather position of corners and gets height
-					y1 = c[2][1] - c[0][1]
-					y2 = c[1][1] - c[3][1]
-					#gathers average of both heights
-					y = (y1 + y2)/2
-					if y < 0:
-					y = y * -1
-					#solve for distance using perspective projection equation
-							#DON'T FORGET TO CHANGE X_real
-					Z = f*X_real/y
-					#convert pixels to mm
-					Z = Z / 3.77953
-					print("The distance of id %d is %d mm" %(ids[i], Z))
+    #gathers aruco dictionary and parameters
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    parameters = aruco.DetectorParameters_create()
 
-                    #Angle calculation
-                    x_center = (c[0][0] + c[1][0] + c[2][0] + c[3][0])/4
-                    deg = (x_center / image_length)*(fov)
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters=parameters)
+    frame_markers = aruco.drawDetectedMarkers(image.copy(), corners, ids)
+                    
+    #checks if any aruco markers were detected
+    if ids == None:
+        print("No markers found.")
+		return False, 0
+    else:		
+        for i in range(len(ids)):
+            c = corners[i][0]
+		
+            #Angle calculation
+            x_center = (c[0][0] + c[1][0] + c[2][0] + c[3][0])/4
+            deg = (x_center / image_length)*(fov)
                             
-                    #check for position of marker on the wheel
-                    if deg < 27:
-                        deg = -27 + deg
-                        print(deg)
-                        return deg, Z
-                    elif deg > 27:
-                        deg = deg - 27
-                        print(deg)
-                        return deg, Z
-                            
-            output.truncate(0)
+            #check for position of marker on the wheel
+            if deg < 27:
+                deg = -27 + deg
+                print(deg)
+                return True, deg
+            elif deg > 27:
+                deg = deg - 27
+                print(deg)
+                return True, deg
+			
+def dist_detection():
+	#setup for video and resolution
+	cap = cv2.VideoCapture(0)
+	cap.set(3, 1920)
+	cap.set(4,1080)
+	ret, image = cap.read()
+              
+    #Convert image to grayscale
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    
+    #gathers aruco dictionary and parameters
+    aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+    parameters = aruco.DetectorParameters_create()
+
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(image, aruco_dict, parameters=parameters)
+    frame_markers = aruco.drawDetectedMarkers(image.copy(), corners, ids)
+                    
+    #checks if any aruco markers were detected
+    if ids == None:
+        print("No markers found.")
+		return False
+    else:
+        for i in range(len(ids)):
+            c = corners[i][0]
+					
+			#Distance calculation
+		    #gather position of corners and gets height
+			y1 = c[2][1] - c[0][1]
+			y2 = c[1][1] - c[3][1]
+	   		#gathers average of both heights
+			y = (y1 + y2)/2
+			if y < 0:
+			    y = y * -1
+			#solve for distance using perspective projection equation
+			#DON'T FORGET TO CHANGE X_real
+			Z = f*X_real/y
+			#convert pixels to mm
+			Z = Z / 3.77953
+			print("The distance of id %d is %d mm" %(ids[i], Z))
+			return True, Z
 
 #Set up for sending values to Arduino
 bus = smbus.SMBus(1)
@@ -134,23 +168,35 @@ def readNumber():
     return number
         
 if __name__ == '__main__':
-
-    while True:
-            
-    angle, distance = aruco_detection()
+	marker_found = False
+	angle_found = False
+	dist_found = False
 	
-	if (deg < 100000000) and (distance < 100000000000) and (distance > 0):
+	#continue video capture until a marker is found
+	while (marker_found == false):
+		marker_found = marker_detection
+	writeNumber(0)		#write to arduino to tell it to stop motors
+	while (readNumber != 1):		#wait until the motor stops and arduino sends a number to tell the pi to start looking for angle
+		pass
+	print("Start detecting for angle")
 	
-		writeNumber(angle)
-		sleep(1)
+	#detect the angle of the aruco marker
+	while (angle_found == False):
+		angle_found, angle = angle_detection()
+	writeNumber(angle)		#write angle to arduino
+	#wait until the robot is centered onto the marker
+	while (readNumber != 1):
+		pass
+	print("Start detecting for distance")
 	
-		writeNumber(distance)
-		sleep(1)
+	#detect the distance of the aruco marker
+	while (dist_found == False):
+		dist_found, distance = dist_detection()
+	writeNumber(distance)
+	
 		
-		print("Press any key to take another image.")
-		cv2.waitKey(0)
 	
-	else:
-		continue
+
+
 	
             
