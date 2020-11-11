@@ -112,17 +112,9 @@ void setup() {
     }
     else { // Set angularDistance to 0 when transitioning to go straight
       turn = 0; // IF done turning, then set wheels to go straight positive 
-      straight = 1; 
+      straight = 1;                     //---------------------------------------------------------------------------------------------------------> Should we allways go straight if there is no angle? or should we check fora straight dista
       r_L = distance;
       r_R = distance;
-      }
-  
-  //set the desired angular distance and read in current motor encodercounts -> Change to radians 
-  //leftAngleRad = ((motorEncoder.read())/1600)*PI;
-  //rightAngleRad =((motorEncoder2.read())/1600)*PI;
-
-//  //set up interrupt functions for each motorencoder
-//  attachInterrupt(digitalPinToInterrupt(2),leftInterrupt,CHANGE);
 //  attachInterrupt(digitalPinToInterrupt(3),rightInterrupt,CHANGE);
 
 }
@@ -135,7 +127,7 @@ void setup() {
 //}
 
 //Desired position is set to last position, last position is set to current position
-//void leftInterrupt(){
+//void leftInterrupt(){//------------------------------------------------------------->The TA said to use an interrupt I think for each wheel...why turned off?
 //  r_L = y_L;
 //  y_L = motorEncoder.read();
 //}
@@ -189,7 +181,7 @@ void turnFunc(double ang){
     
     //setup for straight function
     turn = 0;
-    straight = 1;
+    straight = 1;//-------------------------------------------------->should we should have a check?
     
     //Setting to go three feet /// ------------------------------------------------------------------------------> Readin distance from I2C
     r_L = distance;
@@ -265,7 +257,7 @@ void turnFunc(double ang){
   //Check angle value for direction of turn // What if overshoot?? Assign signbit of control value*-1 -----------------------> WHERE DIRECTIONAL ERRORS ARE HAPPENING
   // May have to swap Highs and Lows
   if (ang < 0){
-    if(leftControllerOutput > 0) { 
+    if(leftControllerOutput > 0) { //Dont tbink this is needed...might be causing the jittering
         digitalWrite(LEFTDIRECTIONPIN, LOW);
     }
     else {
@@ -327,7 +319,7 @@ void straightFunc(double pi_dist){
 //  Serial.println("straight");
   
   //Everything in radians
-  leftAngleRad = -((motorEncoder.read())/1600)*PI;// easier to flip what is read in than all the values bro
+  leftAngleRad = -((motorEncoder.read())/1600)*PI;// easier to flip what is read in than all the values bro...........................might need to cxhang to match turn functioin
   rightAngleRad =((motorEncoder2.read())/1600)*PI;
   
   //Str8 error calculation -> Desired distance - read in
@@ -339,6 +331,7 @@ void straightFunc(double pi_dist){
   if ((strErr_L < 0.5) && (strErr_R < 0.5)) {
     straight = 0;
     turn = 0;
+//do a chack?------------------------------------------------------------------------------------------------------
     circle = 1;
     
     analogWrite(RIGHTMOTORPWM,0);
@@ -435,6 +428,7 @@ void loop(){
   }
   
   else if(circle > 0){   // To do a circle you have to set the right wheel to go faster and farther 
+  //I think ciircle is too complicated and wont work...mcsweeny made it dound like its just a few lines of code....................................................
   
     //turn right 90 
     if(circle == 1){
