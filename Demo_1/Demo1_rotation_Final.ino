@@ -16,7 +16,7 @@
 #define PI 3.1415926535897932384626433832795
 #define SLAVE_ADDRESS 0x04 
 #define POWERPIN 6
-  double distance = 2658;//((2658/(2*PI*0.245))/1600)*PI;//3ft
+  double distance = 2658;//((2658/(2*PI*0.245))/1600)*PI; //7509//3ft
   //double distance = 13290;//5ft
   //double distance = 19606;//7ft
   //double angularDistance = 150;////150 for 90 deg degrees to turn
