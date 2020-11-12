@@ -374,6 +374,10 @@ void rotateFUNC(){
     Tc = millis();
     analogWrite(LEFTMOTORPWM, 50);
     analogWrite(RIGHTMOTORPWM, 25);
+    if (rotate % 5 == 0){
+      analogWrite(LEFTMOTORPWM, 0);
+      analogWrite(RIGHTMOTORPWM, 0);
+    }
     Tc2 = millis();
     delay(Ts-(Tc2-Tc));
     rotate = rotate - 1;
