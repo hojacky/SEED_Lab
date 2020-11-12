@@ -377,6 +377,7 @@ void rotateFUNC(){
     if (rotate % 5 == 0){
       analogWrite(LEFTMOTORPWM, 0);
       analogWrite(RIGHTMOTORPWM, 0);
+      delay(500)
     }
     Tc2 = millis();
     delay(Ts-(Tc2-Tc));
