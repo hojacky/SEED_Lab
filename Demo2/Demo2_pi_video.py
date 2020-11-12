@@ -18,10 +18,6 @@ import busio
 import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 
 def marker_detection():
-    #setup for video and resolution
-    cap = cv2.VideoCapture(0)
-    cap.set(3, 1920)
-    cap.set(4,1080)
     ret, image = cap.read()
               
     #Convert image to grayscale
@@ -44,14 +40,7 @@ def marker_detection():
 def angle_detection():
     fov = 54        #field of view of camera
     image_length = 1920     #length of image in px
-    f = 1550        #focal length of camera in px
-    X_real = 697.32    #actual length of aruco marker in px CHANGE TO THE ACTUAL LENGTH OF THE MARKER FROM THE DEMO
     
-
-    #setup for video and resolution
-    cap = cv2.VideoCapture(0)
-    cap.set(3, 1920)
-    cap.set(4,1080)
     ret, image = cap.read()
               
     #Convert image to grayscale
@@ -87,13 +76,9 @@ def angle_detection():
                 return True, deg
             
 def dist_detection():
-    image_length = 1920     #length of image in px
     f = 1550        #focal length of camera in px
-    X_real = 697.32    #actual length of aruco marker in px CHANGE TO THE ACTUAL LENGTH OF THE MARKER 
-    #setup for video and resolution
-    cap = cv2.VideoCapture(0)
-    cap.set(3, 1920)
-    cap.set(4,1080)
+    X_real = 697.32    #actual length of aruco marker in px
+
     ret, image = cap.read()
               
     #Convert image to grayscale
@@ -148,6 +133,11 @@ def readNumber():
     return number
         
 if __name__ == '__main__':
+    #setup for video and resolution
+    cap = cv2.VideoCapture(0)
+    cap.set(3, 1920)
+    cap.set(4,1080)
+	
     marker_found = False
     angle_found = False
     dist_found = False
