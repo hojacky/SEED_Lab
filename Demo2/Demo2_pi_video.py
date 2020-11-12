@@ -145,7 +145,7 @@ if __name__ == '__main__':
     #continue video capture until a marker is found
     print("Scanning for markers")
     while (marker_found == False):
-        marker_found = marker_detection
+        marker_found = marker_detection()
     writeNumber(0)      #write to arduino to tell it to stop motors
     while (readNumber != 1):        #wait until the motor stops and arduino sends a number to tell the pi to start looking for angle
         pass
