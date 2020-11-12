@@ -153,6 +153,7 @@ if __name__ == '__main__':
     dist_found = False
     
     #continue video capture until a marker is found
+    print("Scanning for markers")
     while (marker_found == False):
         marker_found = marker_detection
     writeNumber(0)      #write to arduino to tell it to stop motors
