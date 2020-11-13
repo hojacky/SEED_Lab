@@ -60,7 +60,7 @@
   double voltageL;
 
   //I2C Variables
-  double received;
+  double received = 923;
   double angle;
   double distance;
   double angularDistance;
@@ -114,10 +114,17 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(2),LeftAngle,CHANGE);
   attachInterrupt(digitalPinToInterrupt(3),RightAngle,CHANGE);
 
-  
-  rotateFUNC(); //--------> ROTATE 360 DEG TIL RECGONZING ARUCO
-  
-  
+  int dummy = 15;
+  while (dummy > 0){
+    rotateFUNC(); //--------> ROTATE 360 DEG TIL RECGONZING ARUCO
+    if (dummy > 0){
+      analogWrite(LEFTMOTORPWM, 0); 
+      analogWrite(RIGHTMOTORPWM, 0);
+      delay(1000);
+      motorEncoder.write(0);
+      motorEncoder2.write(0);
+    }
+  }
 
 }
 
@@ -369,7 +376,7 @@ void LeftAngle(){
  delay(50);
  }
 void rotateFUNC(){
-  rotate = 190;
+  rotate = 20;
   while (rotate > 0){
     Tc = millis();
     analogWrite(LEFTMOTORPWM, 50);
