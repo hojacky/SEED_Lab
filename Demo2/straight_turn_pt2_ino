@@ -1,0 +1,31 @@
+//going straight
+void goStraight(){
+	straight = 0; //need to make the robot go 20 feet, then find the unit multiplier
+	digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+	while(straight > 0){
+		Tc = millis();
+		analogWrite(LEFTMOTORPWM, 100);//Can change while we test to get distance
+		analogWrite(RIGHTMOTORPWM, 100);
+		Tc2 = millis();
+		delay(Ts-(Tc2-Tc));
+		straight = straight - 1;
+	}
+}
+
+//turning an angle
+void turnAngle(){
+	turn = 1.89*angularDistance; //190 is 360 degrees, to be modified for whatever Pi sends
+	while(turn > 0){
+		Tc = millis();
+		if(angularDistance > 0){
+			analogWrite(LEFTMOTORPWM, 100);
+			analogWrite(RIGHTMOTORPWM, 50);
+		}else{
+			analogWrite(LEFTMOTORPWM, 50);
+			analogWrite(RIGHTMOTORPWM, 100);
+		}
+		Tc2 = millis();
+		delay(Ts-(Tc2-Tc));
+		straight = straight - 1;
+	}
+}
