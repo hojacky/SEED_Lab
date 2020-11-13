@@ -36,6 +36,7 @@ def marker_detection():
         return False
     else:
         return True
+        print("Marker Detected")
 
 def angle_detection():
     fov = 54        #field of view of camera
@@ -72,6 +73,7 @@ def angle_detection():
                 return True, deg
             elif deg > 27:
                 deg = deg - 27
+                print("The degree found is ")
                 print(deg)
                 return True, deg
             
@@ -112,8 +114,9 @@ def dist_detection():
             Z = f*X_real/y
             #convert pixels to mm then feet
             Z = Z / 3.77953
-            Z = Z/305
-            print("The distance of id %d is %d ft" %(ids[i], Z))
+            Z = Z / 11
+            #Z = Z/305
+            print("The distance of id %d is %d mm" %(ids[i], Z*11))
             return True, Z
 
 #Set up for sending values to Arduino
@@ -125,7 +128,6 @@ address = 0x04
 def writeNumber(value):
     bus.write_byte(address,value)
     #bus.write_byte_data(address,0,value)
-    return -1
 
 def readNumber():
     number = bus.read_byte(address)
@@ -137,17 +139,26 @@ if __name__ == '__main__':
     cap = cv2.VideoCapture(0)
     cap.set(3, 1920)
     cap.set(4,1080)
-	
+    
     marker_found = False
     angle_found = False
     dist_found = False
-    
+   
     #continue video capture until a marker is found
     print("Scanning for markers")
     while (marker_found == False):
         marker_found = marker_detection()
-    writeNumber(0)      #write to arduino to tell it to stop motors
-    while (readNumber != 1):        #wait until the motor stops and arduino sends a number to tell the pi to start looking for angle
+        
+        
+    if marker_found == True:
+            print("MARKER FOUND")
+            print ("Writing 4")
+        
+            writeNumber(4)      #write to arduino to tell it to stop motors
+            
+            print("Four Received")
+                
+    while (readNumber() != 1):        #wait until the motor stops and arduino sends a number to tell the pi to start looking for angle
         pass
     print("Start detecting for angle")
     
@@ -157,9 +168,9 @@ if __name__ == '__main__':
     
     writeNumber(2)
     sleep(2)
-    writeNumber(angle)      #write angle to arduino
+    writeNumber(int(angle))      #write angle to arduino
     #wait until the robot is centered onto the marker
-    while (readNumber != 1):
+    while (readNumber() != 1):
         pass
     print("Start detecting for distance")
     
@@ -168,12 +179,4 @@ if __name__ == '__main__':
         dist_found, distance = dist_detection()
     writeNumber(3)
     sleep(2)
-    writeNumber(distance)
-    
-        
-    
-
-
-    
-            
-
+    writeNumber(int(distance))
