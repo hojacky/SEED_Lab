@@ -411,6 +411,7 @@ void rightThenCCW(){
    rightCCW = rightCCW - 1;
    }
    rightCCW = 190;
+   digitalWrite(RIGHTDIRECTIONPIN, HIGH);
    while(rightCCW > 0){
     Tc = millis();
     analogWrite(LEFTMOTORPWM, 50);
