@@ -1,0 +1,613 @@
+//SEED_LAB group 14 Arduino motor reading and spinning
+//Name the pins for clarification
+
+#include <Encoder.h>
+#include <Wire.h>
+
+//PWM motor pins
+#define LEFTMOTORPWM 9
+#define RIGHTMOTORPWM 10
+
+//directional motor pins
+#define LEFTDIRECTIONPIN 7
+#define RIGHTDIRECTIONPIN 8
+
+//Other defined constants
+#define PI 3.1415926535897932384626433832795
+#define SLAVE_ADDRESS 0x04
+#define POWERPIN 6
+//  double distance = 2658;//((2658/(2*PI*0.245))/1600)*PI;//3ft
+//double distance = 13290;//5ft
+//double distance = 19606;//7ft
+//double angularDistance = 150;////150 for 90 deg degrees to turn
+// double angularDistance = 255;//135 deg
+//  double angularDistance = 353;// 180 deg
+const double WheelRadius = 0.245;// radius of wheel(meters)
+double D_L = 0;
+double D_R = 0;
+double leftControllerOutput;
+double rightControllerOutput;
+double leftAngularOutput;
+double rightAngularOutput;
+//PID values
+double Kp = 1.5;    //5.5; //V/rad
+double Kd = 0.5;    //0.5; //V/mil/rad
+double Ki = 0.0001; //0.0001; //V/rad*mil
+double I_L = 0;
+double I_R;
+double e_Lpast;
+double e_Rpast;
+int Ts = 50;
+double Tc = 0;
+double lefterror = 20;
+double righterror = 20;
+double strErr_L = 20;
+double strErr_R = 20;
+double r_L = 0; //quadrant;
+double r_R = 0; //quadrant;
+double y_L = 0;
+double y_R = 0;
+double Tc2 = 0;
+
+
+//Motor Driver Variables
+int newPos = 0;
+int phiold = 0;
+int expected_pos;
+bool turn = 1;
+int goForward = 1;
+bool straight = 1;
+bool stopRotate = false;
+bool receive_num = true;
+bool doRotate = true;
+
+//I2C Variables
+int received = 56757;
+int angle;
+double distance = 2000;
+int angularDistance;
+int circle = 1;
+int rotate = 1;
+int rightCCW;
+int x; //-> Dummy Variable for Calling receiveData
+
+
+//set up encoder pins
+Encoder motorEncoder(2, 5);
+Encoder motorEncoder2(3, 6);
+
+
+void setup() {
+  Serial.begin(9600);
+
+  //Open i2C
+  Wire.begin(SLAVE_ADDRESS);
+
+  Wire.onReceive(receive_interrupt);
+  Wire.onRequest(sendData);
+
+
+
+
+
+  //set pins 4,7,8,9,10 as output
+  pinMode(4, OUTPUT); // On/off switch for motors
+  pinMode(LEFTDIRECTIONPIN, OUTPUT);
+  pinMode(RIGHTDIRECTIONPIN, OUTPUT);
+  pinMode(LEFTMOTORPWM, OUTPUT);
+  pinMode(RIGHTMOTORPWM, OUTPUT);
+
+  //Write the power pin to 5V
+  pinMode(POWERPIN, OUTPUT);
+  digitalWrite(POWERPIN, HIGH);
+
+  //set the enable pins
+  digitalWrite(4, HIGH);
+  //digitalWrite(LEFTDIRECTIONPIN, HIGH); // rewritten as soon as PID control starts
+  //digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+  analogWrite(LEFTMOTORPWM, LOW); // Setting them to be zero
+  analogWrite(RIGHTMOTORPWM, LOW);
+
+  //set pin 12 to input ?? --------------------------------------------------------------------------> WHAT IS PIN 12
+  pinMode(12, INPUT);
+
+
+  y_L = motorEncoder.read();
+  y_R = motorEncoder2.read();
+
+  attachInterrupt(digitalPinToInterrupt(2), LeftAngle, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(3), RightAngle, CHANGE);
+
+  receiveData(received);
+
+
+}
+//
+///// ----------------------------------I2C ----------------------------------------------------///
+//
+void receive_interrupt() {
+  while (Wire.available()) {
+    if (receive_num == true) {
+      received = Wire.read();
+      if (received == 2 || received == 3 || received == 5) {
+        receive_num = false;
+
+      }
+    }
+    else {
+      if(received == 5){
+        angle = Wire.read();
+        angle = angle * -1;
+        receive_num = true;
+      }
+      
+      if (received == 2) {
+        angle = Wire.read();
+        receiveData(angle);
+        receive_num = true;
+      }
+
+      if (received == 3) {
+        distance = Wire.read();
+        distance = distance * 11;
+        //distance = distance / 305;  //convert distance to feet
+        receiveData(distance);
+        receive_num = true;
+      }
+    }
+  }
+}
+//
+//
+//
+//
+///// ----------------------------------RECEIVE DATA ------------------------------------------///
+void receiveData(int) {
+//
+//
+//  // -----------------CODE 0 - SHUTTING DOWN MOTORS ------------------------//
+//
+//  //---------INITIAL 360 CHECK FOR ARUCO---------------//
+//
+if(doRotate == true){
+  rotateFUNC(); //--------> ROTATE 360 DEG TIL RECGONZING ARUCO
+  rotate = 0;
+  analogWrite(LEFTMOTORPWM, 0); //-> TURN OFF MOTORS
+  analogWrite(RIGHTMOTORPWM, 0);
+
+
+  Serial.println("Condition Met: exiting if statement");
+  doRotate = false;
+}
+//
+//
+//
+//
+  if (received == 4) {
+    //write motors to off
+    Serial.println("Received");
+    Serial.println(received);
+    analogWrite(LEFTMOTORPWM, 0);
+    analogWrite(RIGHTMOTORPWM, 0);
+    motorEncoder.write(0);
+    motorEncoder2.write(0);
+
+    sendData();
+
+    Serial.println("Condition Met: Moving To ANGLE ");
+//
+  }
+//
+//
+//  // ----------------- CODE 2 - TURNING TO ANGLE ---------------------------//
+//
+  if (received == 2 || received == 5) {
+    Serial.println("Received");
+    Serial.println(received);
+
+    angularDistance = angle * 1.667; // degrees 2 rad
+
+    Serial.println("Angular Distance");
+    Serial.println(angularDistance);
+    //angularDistance = (angle/360)*(7.6 * 3.14)*(2*3.14/19); // circumf. = 19 inches && Distance_turning = 2*3.14/19
+    angularDistance = (angularDistance * PI) / 180; //Convert to radians
+    r_L = angularDistance;
+    r_R = angularDistance;
+
+    while (lefterror > 0.5 && righterror > 0.5) {
+      Tc = millis();
+
+      y_L = -1 * (y_L / 1600) * PI;
+      y_R = (y_R / 1600) * PI;
+
+      lefterror = angularDistance + y_L;
+      righterror = angularDistance - y_R;//chanegd this!!!!!!!!!!!!!!!!!!!!!!!!
+
+      if (Tc > 0) {
+        D_L = (y_L - r_L) / Ts; //rad/mil
+        D_R = (y_R - r_R) / Ts; //rad/mil
+      }
+      else {
+        D_L = 0;
+        D_R = 0;
+      }
+
+      I_L = I_L + (Ts * lefterror); //rad*mil
+      I_R = I_R + (Ts * righterror); //rad*mil
+      leftControllerOutput = (Kp * lefterror); //+ (Ki*I_L) + (Kd*D_L);
+      rightControllerOutput = (Kp * righterror); //+ (Ki*I_R) + (Kd*D_R);
+      if (signbit(leftControllerOutput)) {
+        if (abs(leftControllerOutput) > 8.5) {
+          leftControllerOutput = -8.5;
+        }
+      } else if (abs(leftControllerOutput) > 8.5) {
+        leftControllerOutput = 8.5;
+      }
+
+      if (signbit(rightControllerOutput)) {
+        if (abs(rightControllerOutput) > 8.5) {
+          rightControllerOutput = -8.5;
+        }
+      } else if (abs(rightControllerOutput) > 8.5) {
+        rightControllerOutput = 8.5;
+      }
+
+      // voltageL = leftControllerOutput;
+      // voltageR = rightControllerOutput;
+
+      if (leftControllerOutput > 0) {
+        digitalWrite(7, LOW);
+      } else {
+        digitalWrite(7, HIGH);
+      }
+
+      if (rightControllerOutput < 0) {
+        digitalWrite(8, LOW);
+      } else {
+        digitalWrite(8, HIGH);
+      }
+
+      leftControllerOutput = abs(leftControllerOutput);
+      leftControllerOutput = (leftControllerOutput / 8.5) * 255;
+      if (leftControllerOutput > 255) {
+        leftControllerOutput = 255;
+      }
+
+      rightControllerOutput = abs(rightControllerOutput);
+      rightControllerOutput = (rightControllerOutput / 8.5) * 255;
+      if (rightControllerOutput > 255) {
+        rightControllerOutput = 255;
+      }
+      digitalWrite(7, HIGH);
+      analogWrite(9, leftControllerOutput);
+      analogWrite(10, rightControllerOutput);
+
+      Tc2 = millis();
+      delay(50 - (Tc2 - Tc));
+
+    }
+
+  }
+//
+//
+//  // ----------------- CODE 3 GOING THE DISTANCE AND ENCIRCLING ---------------------------//
+//
+  if (received == 3) {
+    Serial.println("Received");
+    Serial.println(received);
+    distance = (distance / (2 * PI * WheelRadius));
+    distance = (distance / 1600) * PI;
+    distance = (distance * 2658) - 2658;
+    Serial.println("Distance");
+    Serial.println(distance);
+    while (strErr_L > 0.5 && strErr_R > 0.5) { //????????????????????????????????????????????????????? Possible Errors here
+      LeftWheel();
+      RightWheel();
+    }
+
+    // write motors to zero to stop
+    analogWrite(LEFTMOTORPWM, 0);
+    analogWrite(RIGHTMOTORPWM, 0);
+
+    rightThenCCW(); //---- Circle Marker
+    circle = 0;
+
+
+    // write motors to zero to stop
+    analogWrite(LEFTMOTORPWM, 0);
+    analogWrite(RIGHTMOTORPWM, 0);
+  }
+
+
+}
+
+
+
+
+
+
+/// ---------------------------------- SEND DATA ------------------------------------------///
+void sendData() {
+
+
+
+  // ------------SEND CODE 1: ARDUINO READY FOR ANGLE COMMAND --------------//
+  if (received == 4) { // After disabling motors
+    Wire.write(1);
+    Serial.println("Sending 1");
+  }
+
+
+  // ------------SEND CODE 2: ARDUINO READY FOR DISTANCE COMMAND -----------//
+  else if (received == 2) { //After Turn angle Write back
+    Wire.write(2);
+    Serial.println("Sending 2");
+  }
+
+}
+
+
+
+
+// --------------------------INTERRUPTS -----------------------------//
+void LeftAngle() {
+  r_L = y_L;
+  y_L = motorEncoder.read();
+
+}
+
+
+
+
+void RightAngle() {
+  r_R = y_R;
+  y_R = motorEncoder2.read();
+
+}
+//
+//
+//
+//
+//// --------------------------LEFT AND RIGHT WHEEL PID  -----------------------------//
+//
+void LeftWheel() {
+  Tc = millis();
+  double r = distance; //quadrant;
+  Serial.println("LeftWheel");
+  double y = motorEncoder.read();
+  y = (y / 1600) * PI;
+  strErr_L = r + y;
+  if (Tc > 0) {
+    D_L = (strErr_L - e_Lpast) / Ts; //rad/mil
+    e_Lpast = strErr_L;
+  }
+  else {
+    D_L = 0;
+  }
+  if (strErr_L < 0) {
+    leftControllerOutput = 0;
+  } else {
+    I_L = I_L + (Ts * strErr_L); //rad*mil
+    leftControllerOutput = (Kp * strErr_L); // + (Ki*I_L) + (Kd*D_L)));
+  }
+  if (leftControllerOutput > 0) {
+    digitalWrite(7, LOW);
+  } else {
+    digitalWrite(7, HIGH);
+  }
+  leftControllerOutput = abs(leftControllerOutput);
+  leftControllerOutput = (leftControllerOutput / 8.5) * 255;
+  if (leftControllerOutput > 255) {
+    leftControllerOutput = 255;
+  }
+  analogWrite(9, leftControllerOutput);
+  Ts = Ts - Tc;
+  delay(50);
+
+
+}
+
+void RightWheel() {
+  Tc = millis();
+  double r = distance; //quadrant;
+  double y = motorEncoder2.read();
+  y = (y / 1600) * PI;
+  strErr_R = r - y;
+  if (Tc > 0) {
+    D_R = (strErr_R - e_Rpast) / Ts; //rad/mil
+    e_Rpast = strErr_R;
+  } else {
+    D_R = 0;
+  }
+  if (strErr_R < 0) {
+    rightControllerOutput = 0;
+  } else {
+    I_R = I_R + (Ts * strErr_R); //rad*mil
+    rightControllerOutput = (Kp * strErr_R); // + (Ki*I_R) + (Kd*D_R);
+  }
+
+  if (angularDistance < 0) {
+    digitalWrite(8, LOW);
+  } else {
+    digitalWrite(8, HIGH);
+  }
+  rightControllerOutput = abs(rightControllerOutput);
+  rightControllerOutput = (rightControllerOutput / 8.5) * 255;
+  if (rightControllerOutput > 255) {
+    rightControllerOutput = 255;
+  }
+  analogWrite(10, rightControllerOutput);
+
+  Ts = Ts - Tc;
+  delay(50);
+}
+//
+////turn and go straight
+////going straight
+//void goStraight(){
+//  straight = 0; //need to make the robot go 20 feet, then find the unit multiplier
+//  digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+//  while(straight > 0){
+//    Tc = millis();
+//    analogWrite(LEFTMOTORPWM, 100);//Can change while we test to get distance
+//    analogWrite(RIGHTMOTORPWM, 100);
+//    Tc2 = millis();
+//    delay(Ts-(Tc2-Tc));
+//    straight = straight - 1;
+//  }
+//}
+//
+////turning an angle
+//void turnAngle(){
+//  turn = 1.89*angularDistance; //190 is 360 degrees, to be modified for whatever Pi sends 0.53
+//  while(turn > 0){
+//    Tc = millis();
+//    if(angularDistance > 0){
+//      analogWrite(LEFTMOTORPWM, 100);
+//      analogWrite(RIGHTMOTORPWM, 50);
+//    }else{
+//      analogWrite(LEFTMOTORPWM, 50);
+//      analogWrite(RIGHTMOTORPWM, 100);
+//    }
+//    Tc2 = millis();
+//    delay(Ts-(Tc2-Tc));
+//    straight = straight - 1;
+//  }
+//}
+//
+////-------------------- INITIAL 360 DEG FUNCTION -----------------------//
+void rotateFUNC() {
+
+  while (received != 4) {
+    rotate = 15; //190 for 360 degrees
+    while (rotate > 0) {
+      //    Serial.println("begin rotate");
+      //    Serial.println(rotate);
+//      Serial.println("Received");
+//      Serial.println(received);
+      Tc = millis();
+      analogWrite(LEFTMOTORPWM, 70);
+      analogWrite(RIGHTMOTORPWM, 35);
+      Tc2 = millis();
+      delay(Ts - (Tc2 - Tc)); // We subbed 500 for Ts
+      rotate = rotate - 1;
+      //    Serial.println("end rotate");
+      //    Serial.println(rotate);
+    }
+    if (received != 4) {
+      digitalWrite(4, LOW); // -> Write motors off
+      delay(2500);
+      digitalWrite(4, HIGH); // -> Write motors on
+      motorEncoder.write(0);
+      motorEncoder2.write(0);
+      Serial.println("Stop rotate");
+
+
+    }
+  }
+}
+//
+//
+//
+//
+//
+//
+//
+//
+//
+////-------------------- CIRCLE MARKER FUNCTION -----------------------//
+//
+//void circleFUNC() {
+//  circle = 190;
+//  digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+//  while (circle > 0) {
+//    Tc = millis();
+//    analogWrite(LEFTMOTORPWM, 100);
+//    analogWrite(RIGHTMOTORPWM, 50);
+//    Tc2 = millis();
+//    delay(Ts - (Tc2 - Tc));
+//    circle = circle - 1;
+//  }
+//}
+
+
+
+//-------------- Straight & Turn Functions Backup for Circle Function -----------------//
+
+//going straight
+
+
+//   
+//void goStraight() {
+//  distance = distance*0.05;
+//  goForward = int(distance); //need to make the robot go 20 feet, then find the unit multiplier
+//  Serial.print("Go Forward counter");
+//  Serial.print(goForward);
+//  digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+//  while (goForward > 0) {
+//    Tc = millis();
+//    analogWrite(LEFTMOTORPWM, 100);//Can change while we test to get distance
+//    analogWrite(RIGHTMOTORPWM, 100);
+//    Tc2 = millis();
+//    delay(Ts - (Tc2 - Tc));
+//    goForward = goForward - 1;
+//  }
+//}
+//
+////turning an angle
+//void turnAngle() {
+//  turn = 1.89 * angularDistance; //190 is 360 degrees, to be modified for whatever Pi sends
+//  while (turn > 0) {
+//    Tc = millis();
+//    if (angularDistance > 0) {
+//      analogWrite(LEFTMOTORPWM, 100);
+//      analogWrite(RIGHTMOTORPWM, 50);
+//    } else {
+//      analogWrite(LEFTMOTORPWM, 50);
+//      analogWrite(RIGHTMOTORPWM, 100);
+//    }
+//    Tc2 = millis();
+//    delay(Ts - (Tc2 - Tc));
+//    straight = straight - 1;
+//  }
+//}
+//
+//
+////-------------Right then Turn Function (Arriving @ Aruco)------------//
+//
+void rightThenCCW() {
+  rightCCW = 48;
+  while (rightCCW > 0) {
+    Tc = millis();
+    analogWrite(LEFTMOTORPWM, 100);
+    analogWrite(RIGHTMOTORPWM, 50);
+    Tc2 = millis();
+    delay(Ts - (Tc2 - Tc));
+    rightCCW = rightCCW - 1;
+  }
+  rightCCW = 190;
+  digitalWrite(RIGHTDIRECTIONPIN, HIGH);
+  while (rightCCW > 0) {
+    Tc = millis();
+    analogWrite(LEFTMOTORPWM, 50);
+    analogWrite(RIGHTMOTORPWM, 100);
+    Tc2 = millis();
+    delay(Ts - (Tc2 - Tc));
+    rightCCW = rightCCW - 1;
+  }
+}
+
+
+
+///////////////////////////////////// END ///////////////////////////////////////
+
+void loop() {
+//  if(goForward > 0){
+//    goStraight();
+//    straight = 0;
+//  }else{
+//    analogWrite(RIGHTMOTORPWM, 0);
+//    analogWrite(LEFTMOTORPWM, 0);
+//  }
+  
+}
